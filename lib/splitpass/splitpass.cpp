@@ -19,18 +19,24 @@ namespace {
         // init
         static char ID;
 
-        //ProfileInfo* PI;
+        ProfileInfo* PI;
+        LoopInfo *LI;
         //ProfileInfo::EdgeWeights edge_weights;
 
         SplitPass() : LoopPass(ID) {}
 
         // main run on every loop (start from inner to outter)
         virtual bool runOnLoop(Loop *L, LPPassManager &LPM) {
-
+            PI = &getAnalysis<ProfileInfo>();
+            LI = &getAnalysis<LoopInfo>();
 
             errs() <<"------------ preheader -----------\n";
             BasicBlock *preheader = L->getLoopPreheader();
             preheader->dump(); 
+
+            errs() <<"\n------------ header -----------\n";
+            BasicBlock *header = L->getHeader();
+            header->dump(); 
            
 
             errs() <<"\n------------ parent -----------\n";
@@ -46,7 +52,6 @@ namespace {
                 errs() << "children is null"; 
             }
 
-
             // latch is the basic block testing if loop ends
             errs() <<"\n------------ latch -----------\n";
             BasicBlock *latch = L->getLoopLatch();
@@ -61,6 +66,9 @@ namespace {
             }
 
             // L->getExitBlock will return exit BB
+            errs() <<"\n------------ exit -----------\n";
+            BasicBlock *exitbb = L->getExitBlock();
+            exitbb->dump();
 
             return false; // TODO if code is chaged, should return true
         }
@@ -68,8 +76,31 @@ namespace {
         // Load other analysis
         void getAnalysisUsage(AnalysisUsage &AU) const {
             AU.addRequired<LoopInfo>();
+            AU.addRequired<ProfileInfo>();
         } 
     };
+}
+
+/* Note about LLPassManager::insertLoop(Loop *L, Loop *ParentLoop)
+ *
+ * If ParentLoop is NULL, it will be inserted as a TopLevelLoop
+ *
+ */
+ 
+
+// CreateOneLoop should take the current Loop and a SSC List, and will create loop based on that
+static Loop *CreateOneLoop(Loop *L, LPPassManager *LPM) {
+    Loop *new_loop = new Loop();
+    LPM->insertLoop(new_loop, NULL); // second parameter means insert as TopLevelLoop
+
+    //L->get
+
+     // Add all of the blocks in L to the new loop.
+    //for (Loop::block_iterator I = L->block_begin(), E = L->block_end(); I != E; ++I) {
+    //    if (LI->getLoopFor(*I) == L) {
+    //        new_loop->addBasicBlockToLoop(new_bb, LI->getBase());
+    //    }
+    //}
 }
 
 char SplitPass::ID = 0;
