@@ -1,7 +1,7 @@
 dnl **************************************************************************
 dnl * Initialize
 dnl **************************************************************************
-AC_INIT([[[hw1pass]]],[[[1.00]]],[bugs@yourdomain])
+AC_INIT([[[splitpass]]],[[[1.00]]],[bugs@yourdomain])
 
 dnl Identify where LLVM source tree is
 LLVM_SRC_ROOT="/opt/llvm-source"
@@ -1492,9 +1492,9 @@ dnl Configure project makefiles
 dnl List every Makefile that exists within your source tree
 AC_CONFIG_MAKEFILE(Makefile)
 AC_CONFIG_MAKEFILE(lib/Makefile)
-AC_CONFIG_MAKEFILE(lib/hw1pass/Makefile)
+AC_CONFIG_MAKEFILE(lib/splitpass/Makefile)
 AC_CONFIG_MAKEFILE(tools/Makefile)
-AC_CONFIG_MAKEFILE(tools/hw1pass/Makefile)
+AC_CONFIG_MAKEFILE(tools/splitpass/Makefile)
 
 dnl This must be last
 AC_OUTPUT
