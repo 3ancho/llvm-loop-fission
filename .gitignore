@@ -2,3 +2,5 @@ Release+Asserts
 docs
 *.log
 *.*.swp
+*.bc
+*.o
