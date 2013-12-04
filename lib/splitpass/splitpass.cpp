@@ -45,7 +45,7 @@ namespace {
             Loop *CreateOneLoop(Loop *L, LPPassManager *LPM);
     };
 }
-    
+
 // Add it to command line 
 char SplitPass::ID = 0;
 static RegisterPass<SplitPass> X("splitpass", "loop fission project", 
