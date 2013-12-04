@@ -7,6 +7,8 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include "llvm/Analysis/LoopIterator.h"
+#include "llvm/Analysis/LoopPass.h"
 #include <ios>  
 #include <fstream>
 #include <iomanip>
@@ -42,6 +44,7 @@ namespace {
             bool runOnLoop(Loop *L, LPPassManager &LPM);
             bool doFinalization();
             void getAnalysisUsage(AnalysisUsage &) const;
+            void printLoop(Loop *L);
             Loop *CreateOneLoop(Loop *L, LPPassManager *LPM);
     };
 }
@@ -55,7 +58,20 @@ static RegisterPass<SplitPass> X("splitpass", "loop fission project",
 // CreateOneLoop should take the current Loop and a SSC List, and will create loop based on that
 Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
 
+    DEBUG(dbgs() << "running create one loop");
+    std::vector< BasicBlock * > body = L->getBlocks();
+
+    BasicBlock *Header = L->getHeader();
+
+    for(std::vector<BasicBlock * >::iterator it = body.begin(); it != body.end(); ++it) {
+
+        ValueToValueMapTy VMap;
+        BasicBlock *New = CloneBasicBlock(*it, VMap, "ruoran");
+        Header->getParent()->getBasicBlockList().push_back(New);
+    }
+
     Loop *new_loop = new Loop();
+
 
     //            BasicBlock *preheader_bb = L->getPreheader(); 
     //            BasicBlock *header_bb = L->getHeader(); // a reference to previous loop's cond (header) bb
@@ -64,6 +80,9 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
     // TODO update previous loop's exit to ? 
     //
     //
+    //
+    //   For Loop Overview
+    //
     //   Old          New 
     //    
     //   Preheader          Header -> Exit Branch
@@ -71,8 +90,17 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
     //   Body               Copy of Body
     //   Inc                Copy of Inc
     //   Exit new.header    Old.Exit
+    //   
+    //
+    //   While Loop Overview ( While Loop doesn't have inc block, inc block is merged into body block ) 
+    //
+    //   Old          New 
+    //    
+    //   Preheader          Header -> Exit Branch
+    //   Header             Copy of Old.header
+    //   Body               Copy of Body
+    //   Exit new.header    Old.Exit
 
-    std::vector< BasicBlock * > body = L->getBlocks();
 
     //            BranchInst *BI = dyn_cast<BranchInst>(header->getTerminator());
     //            BasicBlock BI->getSuccessor(1); // exit 
@@ -95,24 +123,27 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
     //            new_loop->addBlockEntry(new_bb);
     //
     //            new_loop->addBlockEntry(new_exit_bb);
+    //
+    //            
+   
 
 
-    for(std::vector<BasicBlock * >::iterator it = body.begin(); it != body.end(); ++it) {
+//    for(std::vector<BasicBlock * >::iterator it = body.begin(); it != body.end(); ++it) {
+//
+//        BasicBlock *new_bb = CloneBasicBlock(dyn_cast<BasicBlock>(*it), VMap);
+//
+//        // cond, body, inc
+//        // cond taken points to new body.
+//        // cond exit points to original exit.
+//        // body branch to new inc.
+//        // inc branch to new cond
+//
+//        // new_loop->addBlockEntry(new_bb);
+//    }
 
-        BasicBlock *new_bb = CloneBasicBlock(dyn_cast<BasicBlock>(*it), VMap);
-
-        // cond, body, inc
-        // cond taken points to new body.
-        // cond exit points to original exit.
-        // body branch to new inc.
-        // inc branch to new cond
-
-        // new_loop->addBlockEntry(new_bb);
-    }
 
 
-
-    LPM->insertLoop(new_loop, NULL); // second parameter means insert as TopLevelLoop
+    //LPM->insertLoop(new_loop, NULL); // second parameter means insert as TopLevelLoop
     return new_loop;
 }
 
@@ -122,6 +153,22 @@ bool SplitPass::runOnLoop(Loop *L, LPPassManager &LPM) {
     PI = &getAnalysis<ProfileInfo>();
     LI = &getAnalysis<LoopInfo>();
 
+
+
+    Loop* lp = CreateOneLoop(L, &LPM);
+    return false; // TODO if code is chaged, should return true
+}
+
+bool SplitPass::doFinalization() {
+    //BasicBlock *preheader = L->getLoopPreheader();
+    //BasicBlock *latch = L->getLoopLatch();
+
+    //BasicBlock *testBB = SplitEdge(preheader, latch, this);
+    return true;
+}
+
+// print different section of the loop
+void SplitPass::printLoop(Loop *L) {
     errs() <<"------------ preheader -----------\n";
     BasicBlock *preheader = L->getLoopPreheader();
     preheader->dump(); 
@@ -177,19 +224,8 @@ bool SplitPass::runOnLoop(Loop *L, LPPassManager &LPM) {
     exitbb->dump();
 
     //BasicBlock *testBB = llvm::SplitEdge(preheader, latch, this);
-
-
-    //Loop* lp = CreateOneLoop(L, &LPM);
-    return false; // TODO if code is chaged, should return true
 }
 
-bool SplitPass::doFinalization() {
-    //BasicBlock *preheader = L->getLoopPreheader();
-    //BasicBlock *latch = L->getLoopLatch();
-
-    //BasicBlock *testBB = SplitEdge(preheader, latch, this);
-    return true;
-}
 
 // Load other analysis
 void SplitPass::getAnalysisUsage(AnalysisUsage &AU) const {

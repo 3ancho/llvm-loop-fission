@@ -4,3 +4,5 @@ docs
 *.*.swp
 *.bc
 *.o
+*.out
+*.s
