@@ -26,12 +26,12 @@ entry:
   store i32 1, i32* %i, align 4
   br label %for.cond
 
-for.cond:                                         ; preds = %for.incruoran, %for.inc, %entry
+for.cond:                                         ; preds = %for.inc, %entry
   %4 = load i32* %i, align 4
   %cmp = icmp slt i32 %4, 5
-  br i1 %cmp, label %for.body, label %for.end
+  br i1 %cmp, label %for.body, label %for.cond.copied
 
-for.body:                                         ; preds = %for.condruoran, %for.cond
+for.body:                                         ; preds = %for.cond
   %5 = load i32* %i, align 4
   %idxprom = sext i32 %5 to i64
   %arrayidx = getelementptr inbounds [5 x i32]* %a, i32 0, i64 %idxprom
@@ -76,22 +76,22 @@ for.body:                                         ; preds = %for.condruoran, %fo
   store i32 %add17, i32* %arrayidx19, align 4
   br label %for.inc
 
-for.inc:                                          ; preds = %for.bodyruoran, %for.body
+for.inc:                                          ; preds = %for.body
   %19 = load i32* %i, align 4
   %inc = add nsw i32 %19, 1
   store i32 %inc, i32* %i, align 4
   br label %for.cond
 
-for.end:                                          ; preds = %for.condruoran, %for.cond
+for.end:                                          ; preds = %for.cond.copied
   store i32 0, i32* %i, align 4
   br label %for.cond20
 
-for.cond20:                                       ; preds = %for.inc31ruoran, %for.inc31, %for.end
+for.cond20:                                       ; preds = %for.inc31, %for.end
   %20 = load i32* %i, align 4
   %cmp21 = icmp slt i32 %20, 5
   br i1 %cmp21, label %for.body22, label %for.end33
 
-for.body22:                                       ; preds = %for.cond20ruoran, %for.cond20
+for.body22:                                       ; preds = %for.cond20
   %21 = load i32* %i, align 4
   %22 = load i32* %i, align 4
   %idxprom23 = sext i32 %22 to i64
@@ -115,106 +115,71 @@ for.body22:                                       ; preds = %for.cond20ruoran, %
   %call = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([48 x i8]* @.str, i32 0, i32 0), i32 %21, i32 %23, i32 %24, i32 %26, i32 %27, i32 %29, i32 %30, i32 %32)
   br label %for.inc31
 
-for.inc31:                                        ; preds = %for.body22ruoran, %for.body22
+for.inc31:                                        ; preds = %for.body22
   %33 = load i32* %i, align 4
   %inc32 = add nsw i32 %33, 1
   store i32 %inc32, i32* %i, align 4
   br label %for.cond20
 
-for.end33:                                        ; preds = %for.cond20ruoran, %for.cond20
+for.end33:                                        ; preds = %for.cond20
   %34 = load i32* %retval
   ret i32 %34
 
-for.cond20ruoran:                                 ; No predecessors!
+for.cond.copied:                                  ; preds = %for.inc.copied, %for.cond
   %35 = load i32* %i, align 4
-  %cmp21ruoran = icmp slt i32 %20, 5
-  br i1 %cmp21, label %for.body22, label %for.end33
+  %cmp.copied = icmp slt i32 %35, 5
+  br i1 %cmp.copied, label %for.body.copied, label %for.end
 
-for.body22ruoran:                                 ; No predecessors!
+for.body.copied:                                  ; preds = %for.cond.copied
   %36 = load i32* %i, align 4
-  %37 = load i32* %i, align 4
-  %idxprom23ruoran = sext i32 %22 to i64
-  %arrayidx24ruoran = getelementptr inbounds [5 x i32]* %a, i32 0, i64 %idxprom23
-  %38 = load i32* %arrayidx24, align 4
-  %39 = load i32* %i, align 4
+  %idxprom.copied = sext i32 %36 to i64
+  %arrayidx.copied = getelementptr inbounds [5 x i32]* %a, i32 0, i64 %idxprom.copied
+  %37 = load i32* %arrayidx.copied, align 4
+  %38 = load i32* %i, align 4
+  %sub.copied = sub nsw i32 %38, 1
+  %idxprom1.copied = sext i32 %sub.copied to i64
+  %arrayidx2.copied = getelementptr inbounds [5 x i32]* %b, i32 0, i64 %idxprom1.copied
+  %39 = load i32* %arrayidx2.copied, align 4
+  %add.copied = add nsw i32 %37, %39
   %40 = load i32* %i, align 4
-  %idxprom25ruoran = sext i32 %25 to i64
-  %arrayidx26ruoran = getelementptr inbounds [5 x i32]* %b, i32 0, i64 %idxprom25
-  %41 = load i32* %arrayidx26, align 4
-  %42 = load i32* %i, align 4
+  %idxprom3.copied = sext i32 %40 to i64
+  %arrayidx4.copied = getelementptr inbounds [5 x i32]* %a, i32 0, i64 %idxprom3.copied
+  store i32 %add.copied, i32* %arrayidx4.copied, align 4
+  %41 = load i32* %i, align 4
+  %sub5.copied = sub nsw i32 %41, 1
+  %idxprom6.copied = sext i32 %sub5.copied to i64
+  %arrayidx7.copied = getelementptr inbounds [5 x i32]* %c, i32 0, i64 %idxprom6.copied
+  %42 = load i32* %arrayidx7.copied, align 4
+  %add8.copied = add nsw i32 %42, 5
   %43 = load i32* %i, align 4
-  %idxprom27ruoran = sext i32 %28 to i64
-  %arrayidx28ruoran = getelementptr inbounds [5 x i32]* %c, i32 0, i64 %idxprom27
-  %44 = load i32* %arrayidx28, align 4
-  %45 = load i32* %i, align 4
+  %idxprom9.copied = sext i32 %43 to i64
+  %arrayidx10.copied = getelementptr inbounds [5 x i32]* %b, i32 0, i64 %idxprom9.copied
+  store i32 %add8.copied, i32* %arrayidx10.copied, align 4
+  %44 = load i32* %i, align 4
+  %idxprom11.copied = sext i32 %44 to i64
+  %arrayidx12.copied = getelementptr inbounds [5 x i32]* %b, i32 0, i64 %idxprom11.copied
+  %45 = load i32* %arrayidx12.copied, align 4
+  %mul.copied = mul nsw i32 %45, 2
   %46 = load i32* %i, align 4
-  %idxprom29ruoran = sext i32 %31 to i64
-  %arrayidx30ruoran = getelementptr inbounds [5 x i32]* %d, i32 0, i64 %idxprom29
-  %47 = load i32* %arrayidx30, align 4
-  %callruoran = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([48 x i8]* @.str, i32 0, i32 0), i32 %21, i32 %23, i32 %24, i32 %26, i32 %27, i32 %29, i32 %30, i32 %32)
-  br label %for.inc31
-
-for.inc31ruoran:                                  ; No predecessors!
-  %48 = load i32* %i, align 4
-  %inc32ruoran = add nsw i32 %33, 1
-  store i32 %inc32, i32* %i, align 4
-  br label %for.cond20
-
-for.condruoran:                                   ; No predecessors!
+  %idxprom13.copied = sext i32 %46 to i64
+  %arrayidx14.copied = getelementptr inbounds [5 x i32]* %c, i32 0, i64 %idxprom13.copied
+  store i32 %mul.copied, i32* %arrayidx14.copied, align 4
+  %47 = load i32* %i, align 4
+  %idxprom15.copied = sext i32 %47 to i64
+  %arrayidx16.copied = getelementptr inbounds [5 x i32]* %c, i32 0, i64 %idxprom15.copied
+  %48 = load i32* %arrayidx16.copied, align 4
+  %add17.copied = add nsw i32 %48, 1
   %49 = load i32* %i, align 4
-  %cmpruoran = icmp slt i32 %4, 5
-  br i1 %cmp, label %for.body, label %for.end
+  %idxprom18.copied = sext i32 %49 to i64
+  %arrayidx19.copied = getelementptr inbounds [5 x i32]* %d, i32 0, i64 %idxprom18.copied
+  store i32 %add17.copied, i32* %arrayidx19.copied, align 4
+  br label %for.inc.copied
 
-for.bodyruoran:                                   ; No predecessors!
+for.inc.copied:                                   ; preds = %for.body.copied
   %50 = load i32* %i, align 4
-  %idxpromruoran = sext i32 %5 to i64
-  %arrayidxruoran = getelementptr inbounds [5 x i32]* %a, i32 0, i64 %idxprom
-  %51 = load i32* %arrayidx, align 4
-  %52 = load i32* %i, align 4
-  %subruoran = sub nsw i32 %7, 1
-  %idxprom1ruoran = sext i32 %sub to i64
-  %arrayidx2ruoran = getelementptr inbounds [5 x i32]* %b, i32 0, i64 %idxprom1
-  %53 = load i32* %arrayidx2, align 4
-  %addruoran = add nsw i32 %6, %8
-  %54 = load i32* %i, align 4
-  %idxprom3ruoran = sext i32 %9 to i64
-  %arrayidx4ruoran = getelementptr inbounds [5 x i32]* %a, i32 0, i64 %idxprom3
-  store i32 %add, i32* %arrayidx4, align 4
-  %55 = load i32* %i, align 4
-  %sub5ruoran = sub nsw i32 %10, 1
-  %idxprom6ruoran = sext i32 %sub5 to i64
-  %arrayidx7ruoran = getelementptr inbounds [5 x i32]* %c, i32 0, i64 %idxprom6
-  %56 = load i32* %arrayidx7, align 4
-  %add8ruoran = add nsw i32 %11, 5
-  %57 = load i32* %i, align 4
-  %idxprom9ruoran = sext i32 %12 to i64
-  %arrayidx10ruoran = getelementptr inbounds [5 x i32]* %b, i32 0, i64 %idxprom9
-  store i32 %add8, i32* %arrayidx10, align 4
-  %58 = load i32* %i, align 4
-  %idxprom11ruoran = sext i32 %13 to i64
-  %arrayidx12ruoran = getelementptr inbounds [5 x i32]* %b, i32 0, i64 %idxprom11
-  %59 = load i32* %arrayidx12, align 4
-  %mulruoran = mul nsw i32 %14, 2
-  %60 = load i32* %i, align 4
-  %idxprom13ruoran = sext i32 %15 to i64
-  %arrayidx14ruoran = getelementptr inbounds [5 x i32]* %c, i32 0, i64 %idxprom13
-  store i32 %mul, i32* %arrayidx14, align 4
-  %61 = load i32* %i, align 4
-  %idxprom15ruoran = sext i32 %16 to i64
-  %arrayidx16ruoran = getelementptr inbounds [5 x i32]* %c, i32 0, i64 %idxprom15
-  %62 = load i32* %arrayidx16, align 4
-  %add17ruoran = add nsw i32 %17, 1
-  %63 = load i32* %i, align 4
-  %idxprom18ruoran = sext i32 %18 to i64
-  %arrayidx19ruoran = getelementptr inbounds [5 x i32]* %d, i32 0, i64 %idxprom18
-  store i32 %add17, i32* %arrayidx19, align 4
-  br label %for.inc
-
-for.incruoran:                                    ; No predecessors!
-  %64 = load i32* %i, align 4
-  %incruoran = add nsw i32 %19, 1
-  store i32 %inc, i32* %i, align 4
-  br label %for.cond
+  %inc.copied = add nsw i32 %50, 1
+  store i32 %inc.copied, i32* %i, align 4
+  br label %for.cond.copied
 }
 
 ; Function Attrs: nounwind

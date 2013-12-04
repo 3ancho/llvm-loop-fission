@@ -28,6 +28,7 @@ namespace {
      *
      * If ParentLoop is NULL, it will be inserted as a TopLevelLoop
      *
+     *
      */
 
     class SplitPass: public LoopPass {
@@ -37,17 +38,22 @@ namespace {
             ValueToValueMapTy VMap;  // store old bb -> new bb  TODO maybe init out of this func
 
         public:
+            static int count;
             static char ID;
             SplitPass() : LoopPass(ID) {}
 
             // main run on every loop (start from inner to outter)
             bool runOnLoop(Loop *L, LPPassManager &LPM);
+            bool doInitialization(Loop *, LPPassManager &LPM);
             bool doFinalization();
             void getAnalysisUsage(AnalysisUsage &) const;
             void printLoop(Loop *L);
+            void remapInstruction(Instruction *I,  ValueToValueMapTy &VMap);
             Loop *CreateOneLoop(Loop *L, LPPassManager *LPM);
     };
 }
+
+int SplitPass::count = 0;
 
 // Add it to command line 
 char SplitPass::ID = 0;
@@ -55,177 +61,100 @@ static RegisterPass<SplitPass> X("splitpass", "loop fission project",
         false,    // only looks at CFG?
         false);   // TODO Transform Pass should be ture 
 
+
 // CreateOneLoop should take the current Loop and a SSC List, and will create loop based on that
 Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
+    DEBUG(dbgs() << "running createOneLoop\n");
 
-    DEBUG(dbgs() << "running create one loop");
     std::vector< BasicBlock * > body = L->getBlocks();
-
     BasicBlock *Header = L->getHeader();
+    ValueToValueMapTy LastValueMap;
+
+    std::vector<BasicBlock *> new_body;
 
     for(std::vector<BasicBlock * >::iterator it = body.begin(); it != body.end(); ++it) {
-
         ValueToValueMapTy VMap;
-        BasicBlock *New = CloneBasicBlock(*it, VMap, "ruoran");
+        BasicBlock *New = CloneBasicBlock(*it, VMap, ".copied");
         Header->getParent()->getBasicBlockList().push_back(New);
+        new_body.push_back(New);
+
+        // Update our running map of newest clones
+        LastValueMap[*it] = New;
+        for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end(); VI != VE; ++VI) {
+            LastValueMap[VI->first] = VI->second;
+        }
+
+
     }
 
+    // change vars
+    for(unsigned i=0; i<new_body.size(); ++i) {
+        for (BasicBlock::iterator I = new_body[i]->begin(); I != new_body[i]->end(); ++I) {
+            remapInstruction(I, LastValueMap);
+        }
+    }
+
+
+    BranchInst *new_back_edge = cast<BranchInst>(new_body[new_body.size()-1]->getTerminator());   // Latch's last inst is branch
+    new_back_edge->setSuccessor(0, new_body[0]); // Set to branch to new Cond (Header) 1st BB
+
+    // link new loop body together
+    for(unsigned i=0; i<new_body.size()-1; i++) {
+        BranchInst *next = cast<BranchInst>(new_body[i]->getTerminator());   
+        next->setSuccessor(0, new_body[i+1]);
+    }
+
+    // first cond exit points to second cond block
+    BranchInst *first_loop_to_next_loop = cast<BranchInst>(Header->getTerminator());
+    DEBUG(dbgs() << "branch successors " << first_loop_to_next_loop->getNumSuccessors() << "\n");
+    first_loop_to_next_loop->setSuccessor(1, new_body[0]);
+
     Loop *new_loop = new Loop();
-
-
-    //            BasicBlock *preheader_bb = L->getPreheader(); 
-    //            BasicBlock *header_bb = L->getHeader(); // a reference to previous loop's cond (header) bb
-    //            BasicBlock *exit_bb = L->getExitBlock(); // previous loop's exit
-    //
-    // TODO update previous loop's exit to ? 
-    //
-    //
-    //
-    //   For Loop Overview
-    //
-    //   Old          New 
-    //    
-    //   Preheader          Header -> Exit Branch
-    //   Header             Copy of Old.header
-    //   Body               Copy of Body
-    //   Inc                Copy of Inc
-    //   Exit new.header    Old.Exit
-    //   
-    //
-    //   While Loop Overview ( While Loop doesn't have inc block, inc block is merged into body block ) 
-    //
-    //   Old          New 
-    //    
-    //   Preheader          Header -> Exit Branch
-    //   Header             Copy of Old.header
-    //   Body               Copy of Body
-    //   Exit new.header    Old.Exit
-
-
-    //            BranchInst *BI = dyn_cast<BranchInst>(header->getTerminator());
-    //            BasicBlock BI->getSuccessor(1); // exit 
-    //
-    //            BranchInst *new_entry_bb_bi = dyn_cast<BranchInst>(preheader->getTerminator());
-    //
-    //             
-    //            BasicBlock *new_bb = CloneBasicBlock(dyn_cast<BasicBlock>(*test_bb), VMap);
-    //            BasicBlock *new_exit_bb = CloneBasicBlock(dyn_cast<BasicBlock>(*exit_bb), VMap);
-    //
-    //            new_bb->getSuccessor(0) = new_exit_bb;
-    //
-    //
-    //            // BasicBlock *testBB = SplitEdge(entrybb, entrybb->getSinglePredecessor, this);
-    //
-    //            // addBlockEntry means add a basic block reference
-    //            // new_loop->addBlockEntry(new_entrybb);
-    //            // new_loop->addBlockEntry(new_exitbb);
-    //
-    //            new_loop->addBlockEntry(new_bb);
-    //
-    //            new_loop->addBlockEntry(new_exit_bb);
-    //
-    //            
-   
-
-
-//    for(std::vector<BasicBlock * >::iterator it = body.begin(); it != body.end(); ++it) {
-//
-//        BasicBlock *new_bb = CloneBasicBlock(dyn_cast<BasicBlock>(*it), VMap);
-//
-//        // cond, body, inc
-//        // cond taken points to new body.
-//        // cond exit points to original exit.
-//        // body branch to new inc.
-//        // inc branch to new cond
-//
-//        // new_loop->addBlockEntry(new_bb);
-//    }
-
 
 
     //LPM->insertLoop(new_loop, NULL); // second parameter means insert as TopLevelLoop
     return new_loop;
 }
 
+void SplitPass::remapInstruction(Instruction *I,  ValueToValueMapTy &VMap) {
+    DEBUG(dbgs() << "Remapping an inst\n");
+    for (unsigned op = 0, E = I->getNumOperands(); op != E; ++op) {
+        Value *Op = I->getOperand(op);
+        ValueToValueMapTy::iterator It = VMap.find(Op);
+        if (It != VMap.end()) {
+            DEBUG(dbgs() << "replacing register \n");
+            I->setOperand(op, It->second);
+        }
+    }
 
-// main run on every loop (start from inner to outter)
+    if (PHINode *PN = dyn_cast<PHINode>(I)) {
+        for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+            ValueToValueMapTy::iterator It = VMap.find(PN->getIncomingBlock(i));
+            if (It != VMap.end())
+                PN->setIncomingBlock(i, cast<BasicBlock>(It->second));
+        }
+    }
+}
+
 bool SplitPass::runOnLoop(Loop *L, LPPassManager &LPM) {
     PI = &getAnalysis<ProfileInfo>();
     LI = &getAnalysis<LoopInfo>();
 
-
+    if (count++ == 0) {
+        return false;
+    }
 
     Loop* lp = CreateOneLoop(L, &LPM);
-    return false; // TODO if code is chaged, should return true
+    return true; // TODO if code is chaged, should return true
+}
+
+bool SplitPass::doInitialization(Loop *, LPPassManager &LPM) {
+    return false;
 }
 
 bool SplitPass::doFinalization() {
-    //BasicBlock *preheader = L->getLoopPreheader();
-    //BasicBlock *latch = L->getLoopLatch();
-
-    //BasicBlock *testBB = SplitEdge(preheader, latch, this);
     return true;
 }
-
-// print different section of the loop
-void SplitPass::printLoop(Loop *L) {
-    errs() <<"------------ preheader -----------\n";
-    BasicBlock *preheader = L->getLoopPreheader();
-    preheader->dump(); 
-
-    errs() <<"\n------------ header -----------\n";
-    BasicBlock *header = L->getHeader();
-    header->dump(); 
-
-
-    errs() <<"\n------------ parent -----------\n";
-    Loop *parent = L->getParentLoop();
-    if (parent == NULL) {
-        errs() << "parent is null"; 
-    }
-
-    errs() <<"\n------------ subloop/children -----------\n";
-    std::vector<Loop *> children_vec = L->getSubLoops();
-
-    if (children_vec.empty()) {
-        errs() << "children is null"; 
-    }
-
-    // latch is the basic block testing if loop ends
-    errs() <<"\n------------ latch -----------\n";
-    BasicBlock *latch = L->getLoopLatch();
-    latch->dump();
-
-    errs() <<"\n------------ header's/ for.cond successor (loop body)-----------\n";
-    BranchInst *BI = dyn_cast<BranchInst>(header->getTerminator());
-    BI->getSuccessor(0)->dump(); // taken, 
-
-    errs() <<"\n------------ header's/ for.cond successor (loop exit)-----------\n";
-    BI->getSuccessor(1)->dump(); // exit 
-
-    // errs() <<"----------  num of successors of header's branch inst BI " << BI->getNumSuccessors() << "\n";
-
-
-    errs() <<"\n------------ header's terminator inst -----------\n";
-    BI->dump();
-
-
-    // This will fetch Body, Condition, Inc (loop body basic blocks).
-    errs() <<"\n------------ body -----------\n";
-    std::vector< BasicBlock * > body = L->getBlocks();
-    for(std::vector<BasicBlock * >::iterator it = body.begin(); it != body.end(); ++it) {
-        /* std::cout << *it; ... */
-        dyn_cast<BasicBlock>(*it)->dump();
-    }
-
-    // L->getExitBlock will return exit BB
-    errs() <<"\n------------ exit -----------\n";
-    BasicBlock *exitbb = L->getExitBlock();
-    exitbb->dump();
-
-    //BasicBlock *testBB = llvm::SplitEdge(preheader, latch, this);
-}
-
 
 // Load other analysis
 void SplitPass::getAnalysisUsage(AnalysisUsage &AU) const {
