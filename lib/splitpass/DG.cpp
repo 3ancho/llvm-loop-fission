@@ -9,6 +9,8 @@
 #include "llvm/Support/InstIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPass.h"
 using namespace llvm;
 
 namespace {
@@ -18,93 +20,113 @@ namespace {
     AliasAnalysis *AA;
     Function *F;
     DependenceAnalysis *DA;
-  std::map<Instruction*, std::vector<Instruction*> > adjacentInsts;
+	LoopInfo *LI;
+    std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLoops;
 
   public:
     static char ID; 
     DG() : FunctionPass(ID) {};
     bool runOnFunction(Function &F);
     void getAnalysisUsage(AnalysisUsage &) const;
-    void printAdj(std::map<Instruction*, std::vector<Instruction*> > );
+    void printDG();
+	void buildDG(Loop *);
   }; // class DG
 } // namespace llvm
 
 
-static RegisterPass<DG> X("dg", "583 final dependence graph");
+static RegisterPass<DG> X("dg", "583 - data dependence graph of loops in a function");
 char DG::ID = 0;
+void DG::buildDG(Loop *L) {
+  std::vector<Loop*> subLoops = L->getSubLoops();
+  if (subLoops.empty()) {
+    // this is the innermost loop. Do the analysis.
+	DA = &getAnalysis<DependenceAnalysis>();
+	std::map<Instruction*, std::set<Instruction*> > daMap;
+	daMap.clear();
+	std::set<Instruction*> daSet;
+    for (Loop::block_iterator LB = L->block_begin(), LBE = L->block_end(); LB != LBE; ++LB) {
+	  for (BasicBlock::iterator BI = (*LB)->begin(), BIE = (*LB)->end(); BI != BIE; ++BI) {
+        Instruction *SrcI = BI;
+		daSet.clear();
+        for (Loop::block_iterator LBB = L->block_begin(), LBBE = L->block_end(); LBB != LBBE; ++LBB) {
+		  for (BasicBlock::iterator BBI = (*LBB)->begin(), BBIE = (*LBB)->end(); BBI != BBIE; ++BBI) {
+		    Instruction *DstI = BBI;
+			if (DstI == SrcI) continue;
+			if ((isa<StoreInst>(*DstI) || isa<LoadInst>(*DstI)) 
+			    && (isa<StoreInst>(*SrcI) || isa<LoadInst>(*SrcI))) {
+			// memory dependence analysis
+			  if (Dependence *D = DA->depends(&*SrcI, &*DstI, true)) {
+			    unsigned Direction = D->getDirection(D->getLevels());
+				if (Direction & Dependence::DVEntry::LT) {
+				  // SrcI -> DstI
+                  daSet.insert(DstI);
+				} else if (Direction & Dependence::DVEntry::EQ) {
+				  if (daMap.count(DstI) == 0 || daMap[DstI].count(SrcI) == 0) {
+				    daSet.insert(DstI);
+				  }
+				} else if (Direction & Dependence::DVEntry::GT) {
+				
+				} else {
+				
+				}
+			  }
+			} else {
+			// register dependence analysis
+			}
+		  }
+		}
+		daMap[SrcI] = daSet;
+	  }
+    }
+	dgOfLoops[L] = daMap;
+  } else {
+    for (std::vector<Loop*>::iterator it = subLoops.begin() ; it != subLoops.end(); ++it) {
+	  buildDG(*it);
+	}
+  }
+}
+
 bool DG::runOnFunction(Function &F) {
   this->F = &F;
   AA = &getAnalysis<AliasAnalysis>();
-  DA = &getAnalysis<DependenceAnalysis>();
+  //DA = &getAnalysis<DependenceAnalysis>();
+  LI = &getAnalysis<LoopInfo>();
   // Build an adjacent list
-  std::vector<Instruction*> vect;
-  for (inst_iterator SrcI = inst_begin(F), SrcE = inst_end(F); SrcI != SrcE; ++SrcI) {
-    if (isa<StoreInst>(*SrcI) || isa<LoadInst>(*SrcI)) {
-    vect.clear();
-      for (inst_iterator DstI = inst_begin(F), DstE = inst_end(F); DstI != DstE; ++DstI) {
-      if (DstI == SrcI) continue;
-        if (isa<StoreInst>(*DstI) || isa<LoadInst>(*DstI)) {
-          if (DA->depends(&*SrcI, &*DstI, true)) {
-            //errs() << "dependence found\n";
-      vect.push_back(&*DstI);
-          }
-        }
-      }
-    adjacentInsts[&*SrcI] = vect;
-    }
+  //std::set<Instruction*> vect;
+  for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+    Loop *curLoop = *i;
+	if (curLoop->getParentLoop() != 0) continue; //skip non-toplevel loop in the iteration
+	buildDG(curLoop);
   }
-  // print the adjacency information
-  printAdj(adjacentInsts);
+  printDG();
   return false;
 }
-void DG::printAdj(std::map<Instruction*, std::vector<Instruction*> > m) {
-  errs() << "print the built adjacent instruction lists:\n";
-  std::map<Instruction*, std::vector<Instruction*> >::iterator mapit;
-  for (mapit = adjacentInsts.begin(); mapit != adjacentInsts.end(); ++mapit) {
-    Instruction *inst = mapit->first;
-  errs() << "Instruction " << *inst << " has dependence to:\n";
-  std::vector<Instruction*> vect = mapit->second;
-  std::vector<Instruction*>::iterator vit;
-  for (vit = vect.begin(); vit != vect.end(); ++vit) {
-    errs() << "\t" << *(*vit) << "  --  ";
-    Dependence *D = DA->depends(inst, *vit, true);
-    if (D->isConfused()) {
-      errs() << "confused\n";
-    } else {
-        if (D->isConsistent())
-          errs() << "consistent ";
-        if (D->isFlow())
-          errs() << "flow ";
-        else if (D->isOutput())
-          errs() << "output ";
-        else if (D->isAnti())
-          errs() << "anti ";
-        else if (D->isInput())
-          errs() << "input ";
-    const SCEV *Distance = D->getDistance(D->getLevels()); //only check at the highest level for now
-    errs() << *(cast<SCEVConstant>(*Distance).getValue())<< " ";
-    unsigned Direction = D->getDirection(D->getLevels()); //only check at the highest level for now
-    if (Direction == Dependence::DVEntry::ALL)
-      errs() << "*\n";
-    else {
-      if (Direction & Dependence::DVEntry::LT)
-      errs() << "<\n";
-      if (Direction & Dependence::DVEntry::EQ)
-      errs() << "=\n";
-      if (Direction & Dependence::DVEntry::GT)
-      errs() << ">\n";
-    }
-    }
-  }
-  }
-}
 
-
+void DG::printDG() {
+  errs() << "Print the built dependence graph for each loop: \n";
+  std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > >::iterator mapit1;
+  for (mapit1 = dgOfLoops.begin(); mapit1 != dgOfLoops.end(); ++mapit1) {
+    errs() << "\tPrint the dependences for " << *mapit1->first << "\n";
+	std::map<Instruction*, std::set<Instruction*> > dg_temp = mapit1->second;
+	std::map<Instruction*, std::set<Instruction*> >::iterator mapit2;
+	for (mapit2 = dg_temp.begin(); mapit2 != dg_temp.end(); ++mapit2) {
+	  Instruction *inst = mapit2->first;
+	  errs() << "\t\tInstruction " << *inst << "\n";
+	  std::set<Instruction*> set_temp = mapit2->second;
+	  std::set<Instruction*>::iterator setit;
+	  for (setit = set_temp.begin(); setit != set_temp.end(); ++setit) {
+	    errs() << "\t\t\t\t -------->" << *(*setit) << "\n";
+	  }
+	}
+  }
+} 
 
 void DG::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequiredTransitive<AliasAnalysis>();
   AU.addRequiredTransitive<DependenceAnalysis>();
+  AU.addRequired<LoopInfo>();
+  AU.addPreserved<LoopInfo>();
 }
 
 
