@@ -27,8 +27,6 @@ namespace {
     /* Note about LLPassManager::insertLoop(Loop *L, Loop *ParentLoop)
      *
      * If ParentLoop is NULL, it will be inserted as a TopLevelLoop
-     *
-     *
      */
 
     class SplitPass: public LoopPass {
@@ -68,9 +66,18 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
 
     std::vector< BasicBlock * > body = L->getBlocks();
     BasicBlock *Header = L->getHeader();
+    BasicBlock *PreHeader = L->getLoopPreheader(); 
+    BasicBlock *LatchBlock = L->getLoopLatch();
+
     ValueToValueMapTy LastValueMap;
 
     std::vector<BasicBlock *> new_body;
+
+    std::vector<PHINode*> OrigPHINode;
+
+    for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
+        OrigPHINode.push_back(cast<PHINode>(I));
+    }
 
     for(std::vector<BasicBlock * >::iterator it = body.begin(); it != body.end(); ++it) {
         ValueToValueMapTy VMap;
@@ -83,8 +90,6 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
         for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end(); VI != VE; ++VI) {
             LastValueMap[VI->first] = VI->second;
         }
-
-
     }
 
     // change vars
@@ -94,9 +99,27 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
         }
     }
 
-
     BranchInst *new_back_edge = cast<BranchInst>(new_body[new_body.size()-1]->getTerminator());   // Latch's last inst is branch
     new_back_edge->setSuccessor(0, new_body[0]); // Set to branch to new Cond (Header) 1st BB
+
+    for (BasicBlock::iterator I = new_body[0]->begin(); isa<PHINode>(I); ++I) {
+        for (unsigned phi_i = 0, e = OrigPHINode.size(); phi_i != e; ++phi_i) {
+            PHINode *NewPHI = cast<PHINode>(VMap[OrigPHINode[phi_i]]);
+
+            Value *InVal;
+            // 1
+            InVal = NewPHI->getIncomingValueForBlock(LatchBlock); // original Loop's Latch
+            if (Instruction *InValI = dyn_cast<Instruction>(InVal)) {
+                InVal = LastValueMap[InValI];
+            }
+            // 2
+            InVal = NewPHI->getIncomingValueForBlock(PreHeader); // original Loop's Header
+            if (Instruction *InValI = dyn_cast<Instruction>(InVal)) {
+                InVal = LastValueMap[InValI];
+            }
+        }
+    }
+
 
     // link new loop body together
     for(unsigned i=0; i<new_body.size()-1; i++) {
@@ -108,6 +131,7 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
     BranchInst *first_loop_to_next_loop = cast<BranchInst>(Header->getTerminator());
     DEBUG(dbgs() << "branch successors " << first_loop_to_next_loop->getNumSuccessors() << "\n");
     first_loop_to_next_loop->setSuccessor(1, new_body[0]);
+
 
     Loop *new_loop = new Loop();
 
