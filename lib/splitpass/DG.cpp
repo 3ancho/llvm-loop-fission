@@ -1,3 +1,24 @@
+/*
+This is an LLVM analysis pass which retrieves, for each loop in a function, the 
+data and memory dependence information of all pairs of instructions. The resulted
+dependence graph is saved in the following data structure:
+        
+Loop1-------->  
+              Source  ------->  Destinations 
+			  (all instructions in the destation set of a source instruction
+			  has dependence to the source, thus need to succeed the source. ) 
+              inst1---------->  {inst1i, inst1j, inst1k,...}
+			  inst2---------->  {inst2i, inst2j, inst2k,...}
+			  inst3---------->  {inst3i, inst3j, inst3k,...}
+			  ...
+Loop2-------->
+              inst10--------->  {inst10i, inst10j, inst10k,...}
+			  ...
+...
+Loopn-------->
+              ...
+*/
+
 #define DEBUG_TYPE "dg"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -65,13 +86,18 @@ void DG::buildDG(Loop *L) {
                     daSet.insert(DstI);
                   }
                 } else if (Direction & Dependence::DVEntry::GT) {
-                  
+                  //do nothing
                 } else {
-                  
+                  //to be implemented, consider double direction dependence?
                 }
               }
-            } else {
-              // register dependence analysis
+            } 
+			// for all instructions, run the register dependence analysis through def-use chain
+			// def-use chain
+            for (Value::use_iterator ui = SrcI->use_begin(), ue = SrcI->use_end(); ui != ue; ++ui) {
+              if (Instruction *inst = dyn_cast<Instruction>(*ui)) {
+                daSet.insert(inst);
+              }
             }
           }
         }
