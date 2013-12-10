@@ -34,7 +34,6 @@ namespace {
             ValueToValueMapTy VMap;  // store old bb -> new bb  TODO maybe init out of this func
 
         public:
-            static int count;
             static char ID;
             SplitPass() : FunctionPass(ID) {}
 
@@ -45,8 +44,6 @@ namespace {
             Loop *CreateOneLoop(Loop *L);
     };
 }
-
-int SplitPass::count = 0;
 
 // Add it to command line 
 char SplitPass::ID = 0;
@@ -62,7 +59,6 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
     std::vector< BasicBlock * > body = L->getBlocks();
     BasicBlock *Header = L->getHeader();
     BasicBlock *PreHeader = L->getLoopPreheader(); 
-    BasicBlock *LatchBlock = L->getLoopLatch();
     ValueToValueMapTy LastValueMap;
     std::vector<BasicBlock *> new_body;
 
@@ -131,12 +127,10 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
 }
 
 void SplitPass::remapInstruction(Instruction *I,  ValueToValueMapTy &VMap) {
-    DEBUG(dbgs() << "Remapping an inst\n");
     for (unsigned op = 0, E = I->getNumOperands(); op != E; ++op) {
         Value *Op = I->getOperand(op);
         ValueToValueMapTy::iterator It = VMap.find(Op);
         if (It != VMap.end()) {
-            DEBUG(dbgs() << "replacing register \n");
             I->setOperand(op, It->second);
         }
     }
@@ -153,7 +147,16 @@ void SplitPass::remapInstruction(Instruction *I,  ValueToValueMapTy &VMap) {
 bool SplitPass::runOnFunction(Function &F) {
     PI = &getAnalysis<ProfileInfo>();
     LI = &getAnalysis<LoopInfo>();
+    int loopnum;
 
+    loopnum = 0;
+    for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+        loopnum++;
+    }
+    DEBUG(dbgs() << "Loop num: " << loopnum << "\n") ;
+
+
+    // the count should be SSC.length - 1
     unsigned split_count = 1; // hard code TODO use SCC map 
 
     for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
@@ -163,8 +166,22 @@ bool SplitPass::runOnFunction(Function &F) {
             Loop* lp = CreateOneLoop(L);
             LI->addTopLevelLoop(lp); 
         }
-        break;// TODO work on first loop of a function only
+        //break; // TODO work on first loop of a function only
     }
+
+
+    loopnum = 0;
+    for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+        loopnum++;
+    }
+    DEBUG(dbgs() << "Loop num: " << loopnum << "\n") ;
+    // now each SCC corresponds to a Loop.
+    //
+    // loop through SCC Map. using an index, i
+    //  
+    // For each Inst in Loop[i], Remove Inst from Loop[i] if Inst not in SCC[i]
+    //
+    // removeBlockFromLoop (BlockT *BB)
 
     return true; // if code is chaged, should return true
 }

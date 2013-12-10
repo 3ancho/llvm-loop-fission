@@ -26,7 +26,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   %indvars.iv1 = phi i64 [ %indvars.iv.next2, %for.inc ], [ 1, %entry ]
   %lftr.wideiv5 = trunc i64 %indvars.iv1 to i32
   %exitcond6 = icmp ne i32 %lftr.wideiv5, 5
-  br i1 %exitcond6, label %for.body, label %for.end
+  br i1 %exitcond6, label %for.body, label %for.cond.copied
 
 for.body:                                         ; preds = %for.cond
   %arrayidx = getelementptr inbounds [5 x i32]* %a, i64 0, i64 %indvars.iv1
@@ -59,7 +59,7 @@ for.inc:                                          ; preds = %for.body
   %indvars.iv.next2 = add i64 %indvars.iv1, 1
   br label %for.cond
 
-for.end:                                          ; preds = %for.cond
+for.end:                                          ; preds = %for.cond.copied
   br label %for.cond20
 
 for.cond20:                                       ; preds = %for.inc31, %for.end
@@ -110,6 +110,43 @@ for.body22.copied:                                ; preds = %for.cond20.copied
 for.inc31.copied:                                 ; preds = %for.body22.copied
   %indvars.iv.next.copied = add i64 %indvars.iv.copied, 1
   br label %for.cond20.copied
+
+for.cond.copied:                                  ; preds = %for.inc.copied, %for.cond
+  %indvars.iv1.copied = phi i64 [ %indvars.iv.next2.copied, %for.inc.copied ], [ 1, %for.cond ]
+  %lftr.wideiv5.copied = trunc i64 %indvars.iv1.copied to i32
+  %exitcond6.copied = icmp ne i32 %lftr.wideiv5.copied, 5
+  br i1 %exitcond6.copied, label %for.body.copied, label %for.end
+
+for.body.copied:                                  ; preds = %for.cond.copied
+  %arrayidx.copied = getelementptr inbounds [5 x i32]* %a, i64 0, i64 %indvars.iv1.copied
+  %21 = load i32* %arrayidx.copied, align 4
+  %22 = add nsw i64 %indvars.iv1.copied, -1
+  %arrayidx2.copied = getelementptr inbounds [5 x i32]* %b, i64 0, i64 %22
+  %23 = load i32* %arrayidx2.copied, align 4
+  %add.copied = add nsw i32 %21, %23
+  %arrayidx4.copied = getelementptr inbounds [5 x i32]* %a, i64 0, i64 %indvars.iv1.copied
+  store i32 %add.copied, i32* %arrayidx4.copied, align 4
+  %24 = add nsw i64 %indvars.iv1.copied, -1
+  %arrayidx7.copied = getelementptr inbounds [5 x i32]* %c, i64 0, i64 %24
+  %25 = load i32* %arrayidx7.copied, align 4
+  %add8.copied = add nsw i32 %25, 5
+  %arrayidx10.copied = getelementptr inbounds [5 x i32]* %b, i64 0, i64 %indvars.iv1.copied
+  store i32 %add8.copied, i32* %arrayidx10.copied, align 4
+  %arrayidx12.copied = getelementptr inbounds [5 x i32]* %b, i64 0, i64 %indvars.iv1.copied
+  %26 = load i32* %arrayidx12.copied, align 4
+  %mul.copied = shl nsw i32 %26, 1
+  %arrayidx14.copied = getelementptr inbounds [5 x i32]* %c, i64 0, i64 %indvars.iv1.copied
+  store i32 %mul.copied, i32* %arrayidx14.copied, align 4
+  %arrayidx16.copied = getelementptr inbounds [5 x i32]* %c, i64 0, i64 %indvars.iv1.copied
+  %27 = load i32* %arrayidx16.copied, align 4
+  %add17.copied = add nsw i32 %27, 1
+  %arrayidx19.copied = getelementptr inbounds [5 x i32]* %d, i64 0, i64 %indvars.iv1.copied
+  store i32 %add17.copied, i32* %arrayidx19.copied, align 4
+  br label %for.inc.copied
+
+for.inc.copied:                                   ; preds = %for.body.copied
+  %indvars.iv.next2.copied = add i64 %indvars.iv1.copied, 1
+  br label %for.cond.copied
 }
 
 ; Function Attrs: nounwind
