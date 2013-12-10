@@ -9,12 +9,10 @@
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
-#include <ios>  
-#include <fstream>
-#include <iomanip>
 
 #include "llvm/Transforms/Utils/Cloning.h" // inorder to include "ValueToValueMapTy"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h" // splitEdge, etc
+#include "llvm/Transforms/Utils/Local.h"
 
 
 /* Loop is a child class of LoopBase
@@ -29,7 +27,7 @@ namespace {
      * If ParentLoop is NULL, it will be inserted as a TopLevelLoop
      */
 
-    class SplitPass: public LoopPass {
+    class SplitPass: public FunctionPass {
         private:
             ProfileInfo* PI;
             LoopInfo *LI;
@@ -38,16 +36,13 @@ namespace {
         public:
             static int count;
             static char ID;
-            SplitPass() : LoopPass(ID) {}
+            SplitPass() : FunctionPass(ID) {}
 
             // main run on every loop (start from inner to outter)
-            bool runOnLoop(Loop *L, LPPassManager &LPM);
-            bool doInitialization(Loop *, LPPassManager &LPM);
-            bool doFinalization();
+            bool runOnFunction(Function &F);
             void getAnalysisUsage(AnalysisUsage &) const;
-            void printLoop(Loop *L);
             void remapInstruction(Instruction *I,  ValueToValueMapTy &VMap);
-            Loop *CreateOneLoop(Loop *L, LPPassManager *LPM);
+            Loop *CreateOneLoop(Loop *L);
     };
 }
 
@@ -57,41 +52,20 @@ int SplitPass::count = 0;
 char SplitPass::ID = 0;
 static RegisterPass<SplitPass> X("splitpass", "loop fission project", 
         false,    // only looks at CFG?
-        false);   // TODO Transform Pass should be ture 
+        true);    // Transform Pass should be ture 
 
 
 // CreateOneLoop should take the current Loop and a SSC List, and will create loop based on that
-Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
+Loop * SplitPass::CreateOneLoop(Loop *L) {
     DEBUG(dbgs() << "running createOneLoop\n");
 
     std::vector< BasicBlock * > body = L->getBlocks();
     BasicBlock *Header = L->getHeader();
     BasicBlock *PreHeader = L->getLoopPreheader(); 
     BasicBlock *LatchBlock = L->getLoopLatch();
-
     ValueToValueMapTy LastValueMap;
-
     std::vector<BasicBlock *> new_body;
 
-    std::vector<PHINode*> OrigPHINode;
-
-    // Testing PhiNode Methods
-    //for (BasicBlock::iterator I = Header->begin(); isa<PHINode>(I); ++I) {
-    //    PHINode *phi = cast<PHINode>(I);
-
-    //    phi->dump();
-    //    DEBUG(dbgs() << "\n");
-
-    //    phi->getIncomingValueForBlock(LatchBlock)->dump();
-    //    DEBUG(dbgs() << "\n");
-
-    //    phi->getIncomingValueForBlock(PreHeader)->dump();
-    //    DEBUG(dbgs() << "\n");
-
-
-    //}
-    
-    //body.push_back(Header);
     for(std::vector<BasicBlock * >::iterator it = body.begin(); it != body.end(); ++it) {
         ValueToValueMapTy VMap;
         BasicBlock *New = CloneBasicBlock(*it, VMap, ".copied");
@@ -114,10 +88,7 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
     }
     DEBUG(dbgs() << "Change Var Done \n");
 
-
     for (BasicBlock::iterator I = new_body[0]->begin(); isa<PHINode>(I); ++I) {
-
-        
         PHINode *NewPHI = cast<PHINode>(I); 
         DEBUG(dbgs() << "About to fix phi node: "<<  NewPHI << "\n");
 
@@ -127,13 +98,6 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
             }
         }
         DEBUG(dbgs() << "Done phi node: "<<  NewPHI << "\n");
-        
-        //for (unsigned phi_i = 0, e = OrigPHINode.size(); phi_i != e; ++phi_i) {
-        //    PHINode *NewPHI = cast<PHINode>(VMap[OrigPHINode[phi_i]]);
-        //    DEBUG(dbgs() << "About to fix phi node: "<<  NewPHI << "\n");
-        //    NewPHI->setIncomingBlock(0, new_body[new_body.size()-1]);
-        //    NewPHI->setIncomingBlock(1, Header);
-        //}
     }
     DEBUG(dbgs() << "Phi Node loop done \n");
 
@@ -152,17 +116,17 @@ Loop * SplitPass::CreateOneLoop(Loop *L, LPPassManager *LPM) {
     DEBUG(dbgs() << "branch successors " << first_loop_to_next_loop->getNumSuccessors() << "\n");
     first_loop_to_next_loop->setSuccessor(1, new_body[0]);
 
-    // first is last, last is first?
-    Header->dump();
-
-    for (unsigned i=0; i<new_body.size();i++) {
-        new_body[i]->dump();
-    }
-
     Loop *new_loop = new Loop();
 
+    for (unsigned i=0; i<new_body.size();i++) {
+        new_loop->addBlockEntry(new_body[i]);
+    }
+    new_loop->moveToHeader(new_body[0]); // set Header for new loop 
+    
+    BasicBlock *NewPreHeader = L->getLoopPreheader(); 
+    NewPreHeader = Header; 
 
-    //LPM->insertLoop(new_loop, NULL); // second parameter means insert as TopLevelLoop
+
     return new_loop;
 }
 
@@ -186,25 +150,25 @@ void SplitPass::remapInstruction(Instruction *I,  ValueToValueMapTy &VMap) {
     }
 }
 
-bool SplitPass::runOnLoop(Loop *L, LPPassManager &LPM) {
+bool SplitPass::runOnFunction(Function &F) {
     PI = &getAnalysis<ProfileInfo>();
     LI = &getAnalysis<LoopInfo>();
 
-    if (count++ == 0) {
-        return false;
+    unsigned split_count = 1; // hard code TODO use SCC map 
+
+    for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+        Loop *L = *i;
+        if (L->getParentLoop() != 0) continue; //skip non-toplevel loop in the iteration
+        for (unsigned i=0; i<split_count; ++i) {
+            Loop* lp = CreateOneLoop(L);
+            LI->addTopLevelLoop(lp); 
+        }
+        break;// TODO work on first loop of a function only
     }
 
-    Loop* lp = CreateOneLoop(L, &LPM);
-    return true; // TODO if code is chaged, should return true
+    return true; // if code is chaged, should return true
 }
 
-bool SplitPass::doInitialization(Loop *, LPPassManager &LPM) {
-    return false;
-}
-
-bool SplitPass::doFinalization() {
-    return true;
-}
 
 // Load other analysis
 void SplitPass::getAnalysisUsage(AnalysisUsage &AU) const {
