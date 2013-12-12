@@ -14,4 +14,7 @@
    }
   }
 
-   //hand calculation show that statement 2 which has store to A[i-1] has only dependencies into it. which means all edges are negative using it as a source but positive using it as destination. Hence, hand calculation show that this statement can be put into a second, separate loop and has no effect to the final results. If dependence direction is < or = then that is true dependency from src to dst or dependence distance >= 0
+// hand calculation show that statement 2 which has store to A[i-1] has only dependencies into it.
+// which means all edges are negative using it as a source but positive using it as destination. 
+// Hence, hand calculation show that this statement can be put into a second, separate loop and has no effect to the final results. 
+// If dependence direction is < or = then that is true dependency from src to dst or dependence distance >= 0
