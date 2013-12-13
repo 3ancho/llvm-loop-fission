@@ -22,25 +22,21 @@
 using namespace llvm;
 
 namespace {
-    /* Note about LLPassManager::insertLoop(Loop *L, Loop *ParentLoop)
-     *
-     * If ParentLoop is NULL, it will be inserted as a TopLevelLoop
-     */
-
     class SplitPass: public FunctionPass {
         private:
             ProfileInfo* PI;
             LoopInfo *LI;
-            ValueToValueMapTy VMap;  // store old bb -> new bb  TODO maybe init out of this func
+            ValueToValueMapTy VMap;  // store old bb -> new bb  
 
         public:
             static char ID;
             SplitPass() : FunctionPass(ID) {}
 
-            // main run on every loop (start from inner to outter)
             bool runOnFunction(Function &F);
             void getAnalysisUsage(AnalysisUsage &) const;
             void remapInstruction(Instruction *I,  ValueToValueMapTy &VMap);
+            
+            // clone the given loop, L 
             Loop *CreateOneLoop(Loop *L);
     };
 }
@@ -52,13 +48,16 @@ static RegisterPass<SplitPass> X("splitpass", "loop fission project",
         true);    // Transform Pass should be ture 
 
 
-// CreateOneLoop should take the current Loop and a SSC List, and will create loop based on that
+// CreateOneLoop should take the current Loop 
 Loop * SplitPass::CreateOneLoop(Loop *L) {
-    DEBUG(dbgs() << "running createOneLoop\n");
+    DEBUG(dbgs() << "Running CreateOneLoop\n");
+    // TODO check if only one exit block.
+    // TODO check if save to clone.
 
     std::vector< BasicBlock * > body = L->getBlocks();
     BasicBlock *Header = L->getHeader();
     BasicBlock *PreHeader = L->getLoopPreheader(); 
+    BasicBlock *Exit = L->getExitBlock(); 
     ValueToValueMapTy LastValueMap;
     std::vector<BasicBlock *> new_body;
 
@@ -82,21 +81,40 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
             remapInstruction(I, LastValueMap);
         }
     }
-    DEBUG(dbgs() << "Change Var Done \n");
+    DEBUG(dbgs() << "Cloned loop's register name changed ok\n");
 
-    for (BasicBlock::iterator I = new_body[0]->begin(); isa<PHINode>(I); ++I) {
-        PHINode *NewPHI = cast<PHINode>(I); 
-        DEBUG(dbgs() << "About to fix phi node: "<<  NewPHI << "\n");
+    // fix the phi node in cloned Loops Header  
+    for(unsigned i=0; i<new_body.size(); i++) {
+        for (BasicBlock::iterator I = new_body[i]->begin(); isa<PHINode>(I); ++I) {
+            PHINode *NewPHI = cast<PHINode>(I); 
+            DEBUG(dbgs() << "About to fix phi node: "<<  NewPHI << "\n");
+
+            for (unsigned i=0; i<NewPHI->getNumIncomingValues(); ++i) {
+                if (NewPHI->getIncomingBlock(i) == PreHeader) {
+                    NewPHI->setIncomingBlock(i, Header);
+                }
+            }
+            DEBUG(dbgs() << "Done phi node: "<<  NewPHI << "\n");
+        }
+    }
+    DEBUG(dbgs() << "Cloned Loop body Phi Node done \n");
+    DEBUG(dbgs() << "Start working on exit block \n");
+
+    // fix the phi node in original Loop's exit BB. Because the cloned loop points to it.
+    for (BasicBlock::iterator I = Exit->begin(); isa<PHINode>(I); ++I) {
+        PHINode *NewPHI = cast<PHINode>(I);
+        DEBUG(dbgs() << "Exit block, About to fix phi node: "<<  NewPHI << "\n");
 
         for (unsigned i=0; i<NewPHI->getNumIncomingValues(); ++i) {
-            if (NewPHI->getIncomingBlock(i) == PreHeader) {
-                NewPHI->setIncomingBlock(i, Header);
+            if (NewPHI->getIncomingBlock(i) == Header) {
+                NewPHI->setIncomingBlock(i, new_body[0]); // cloned loop's Header
             }
         }
-        DEBUG(dbgs() << "Done phi node: "<<  NewPHI << "\n");
+        DEBUG(dbgs() << "Exit block, Done phi node: "<<  NewPHI << "\n");
     }
-    DEBUG(dbgs() << "Phi Node loop done \n");
 
+
+    DEBUG(dbgs() << "All Phi Node done \n");
 
     BranchInst *new_back_edge = cast<BranchInst>(new_body[new_body.size()-1]->getTerminator());   // Latch's last inst is branch
     new_back_edge->setSuccessor(0, new_body[0]); // Set to branch to new Cond (Header) 1st BB
