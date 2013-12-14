@@ -16,14 +16,15 @@ the DG pass. There are a few things:
 #include "scc.h"
 
 using namespace llvm;
-
-namespace {
-  struct scc : public FunctionPass {
-    static char ID;
+/////////////////////NOTICE these two have to appear in scc.h///////////
 	LoopInfo *LI;
 	DG *depmap;
-    scc() : FunctionPass(ID) {}
-    virtual void outputSCC(Loop *L) {
+/////////////////END NOTICE/////////////////////////////////////////////
+
+char scc::ID = 0;
+static RegisterPass<scc> X("scc", "scc Pass", false, false);
+////////////public implementation //////////////////////
+virtual void scc::outputSCC(Loop *L) {
 	
       std::vector<Loop*> subLoops = L->getSubLoops();
 	  if (subLoops.empty()) { // analysis only applies to innermost loops, so check for that
@@ -36,6 +37,9 @@ namespace {
         if (dg_temp.empty()) {
           errs() << "Hello: Dependence graph is empty\n";
         } else {
+	////////////NOTICE//////////
+	/////CALL do_distribution HERE////////////
+/*
           std::map<Instruction*, std::set<Instruction*> >::iterator mapit2;
           for (mapit2 = dg_temp.begin(); mapit2 != dg_temp.end(); ++mapit2) {
             Instruction *inst = mapit2->first;
@@ -48,39 +52,34 @@ namespace {
           }
           errs() << "Hello: There are " << depmap->numOfNodes[L] << " nodes in the loop\n";
           errs() << "Hello: There are " << depmap->numOfDeps[L] << " data dependencies in the loop\n";
+*/
         }
       }
     } else {
 	  for (std::vector<Loop*>::iterator it = subLoops.begin() ; it != subLoops.end(); ++it) {
-        outputDG(*it);
+        outputSCC(*it);
       }
 	}
 
 	}
-
-    virtual bool runOnFunction(Function &F) {
+virtual bool scc:: runOnFunction(Function &F) {
 	  LI = &getAnalysis<LoopInfo>();
 	  depmap = &getAnalysis<DG>();
 	  Loop *curLoop;
 	  for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
 	    curLoop = *i;
 		if (curLoop->getParentLoop() != 0) continue; //skip non-toplevel loop in the iteration
-		outputDG(curLoop);
+		outputSCC(curLoop);
       }
       return false;
     }
-	void getAnalysisUsage(AnalysisUsage &AU) const {
+
+void scc::getAnalysisUsage(AnalysisUsage &AU) const {
       AU.setPreservesAll();
       AU.addRequired<LoopInfo>();
 	  AU.addRequired<DG>();
-      //AU.addPreserved<LoopInfo>();
     }
-  };
-}
-
-char scc::ID = 0;
-static RegisterPass<scc> X("scc", "scc Pass", false, false);
-
+////////////END public implementation//////////////////
 //////////private implementation/////////////////////
 std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap)
 {
