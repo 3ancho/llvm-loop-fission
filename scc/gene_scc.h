@@ -155,7 +155,7 @@ struct data_dependence_relation
 typedef struct data_dependence_relation ddr;
 typedef struct data_dependence_relation *ddr_p;
 
-std::vector<ddr> compute_data_dependences_for_loop (Loop *loop_nest);
+std::vector<ddr> compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap);
 
 /* Data dependence type.  */
 /////////////?NOTICE:DO WE DIFFER DEP TYPE? OR we only build edge if dep existing
@@ -423,19 +423,11 @@ find_vertex_with_instrs (rdg_p rdg, Instruction instrs);
 bool
 contains_dr_p (Instruction instrs, ddr_p dp);
 
-
-//////////////////////////////////
-// TODO
-/*
 int
-DG::number_of_vertices (rdg_p rdg);
-*/
-//////////////////////////////////
-int
-number_of_vertices (rdg_p rdg);
+number_of_vertices (rdg_p rdg, DG *depmap);
 
 int
-DG::number_of_edges (rdg_p rdg);
+number_of_edges (rdg_p rdg, DG *depmap);
 
 void
 create_vertices (rdg_p rdg);

@@ -601,14 +601,11 @@ contains_dr_p ( Instruction instrs, std::vector<ddr_p> pddr)
 
 }
 
-///////////////////////////////////////
-// TODO
-/*
 int
-DG::number_of_vertices (rdg_p rdg)
-  return numOfNodes(RDG_LOOP(rdg));
-*/
-//////////////////////////////////////
+number_of_vertices (rdg_p rdg, DG *depmap)
+  return depmap->numOfNodes[RDG_LOOP(rdg)];
+
+/*
 int
 number_of_vertices (rdg_p rdg)
 {
@@ -622,13 +619,14 @@ number_of_vertices (rdg_p rdg)
   for (i = 0; i < loop_nest->getNumBlocks(); i++)
     {
       bb = bbs[i];
-    
+*/    
       /* Test whether the basic block is a direct son of the loop,
          the bbs array contains all basic blocks in DFS order.  */
-      if (bb->getParentLoop() == loop_nest)
+//      if (bb->getParentLoop() == loop_nest)
         /* Iterate of each statement of the basic block.  */
-        for (bsi = bb->begin(); bsi!=bb->end(); ++bsi)
+//        for (bsi = bb->begin(); bsi!=bb->end(); ++bsi)
 //          if (!loop_nest_control_p (rdg, bsi_stmt (bsi)))
+/*
             nb_stmts++;
     }
   
@@ -636,7 +634,7 @@ number_of_vertices (rdg_p rdg)
 
   return nb_stmts;
 }
-
+*/
 
 void
 create_vertices (rdg_p rdg)
@@ -681,8 +679,8 @@ create_vertices (rdg_p rdg)
 }
 
 int
-DG::number_of_edges (rdg_p rdg)
-  return numOfDeps(RDG_LOOP(rdg));
+number_of_edges (rdg_p rdg, DG *depmap)
+  return depmap->numOfDeps[RDG_LOOP(rdg)];
 
 /* Creates all the edges of a RDG.  */
 void
@@ -890,11 +888,10 @@ number_of_data_dependences (rdg_p rdg)
 }
 */
 std::vector<ddr>  
-compute_data_dependences_for_loop (Loop *loop_nest)
-// should be a function of class DG
+compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap)
 {
   std::vector<ddr> ddr_0; 
-  std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > >::iterator mapit1;
+  std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLooops = depmap->dgOfLoops[loop_nest];
   for (mapit1 = dgOfLoops.begin(); mapit1 != dgOfLoops.end(); ++mapit1) {
     int count = 0;
     std::map<Instruction*, std::set<Instruction*> > dg_temp = mapit1->seconnd;
