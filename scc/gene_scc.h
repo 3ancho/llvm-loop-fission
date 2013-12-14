@@ -30,7 +30,6 @@ typedef struct prdg_edge *prdg_edge_p;
 
 //////////// data structure that we need to construct/////////
 
-
 struct rdg 
 {
 /////////////////////NOTICE: COMMENT OUT BUT SHOULD BE NEEDED IN THE FUTURE
@@ -91,7 +90,6 @@ struct rdg
 //#define RDG_DR(G)         (G)->datarefs
 #define RDG_DDR(G)        (G)->dependence_relations
 
-
 /* A RDG vertex representing a statement.  */
 struct rdg_vertex 
 {
@@ -142,6 +140,11 @@ struct rdg_vertex
 #define RDGV_OUT(V)        (V)->out_edges
 #define RDGV_PARTITIONS(V) (V)->partition_numbers
 #define RDGV_SCCS(V)       (V)->scc_numbers
+
+//caogao
+// copied from libiberty.h 
+#define XNEW(T)        ((T *) xmalloc (sizeof (T)))
+#define XCNEWVEC(T, N) ((T *) xcalloc ((N), sizeof (T)))
 
 struct data_dependence_relation
 {
@@ -313,7 +316,7 @@ struct prdg_edge
 
 /* Helper function for Depth First Search.  */
 
-static void
+void
 dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned int scc);
 
 
@@ -321,25 +324,25 @@ dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned int scc);
    described in Cormen et al., "Introduction to Algorithms", MIT Press.
    Returns the max of "finishing times" for the partition graph G.  */
 
-static int
+int
 dfs_rdgp (prdg_p g);
 
 
 /* Comparison function to compare "finishing times" of
    two vertices.  */
 
-static bool
+bool
 rdgp_vertex_less_than_p (const prdg_vertex_p a,
                          const prdg_vertex_p b);
 
 /* Helper function for the computation of strongly connected components.  */
 
-static unsigned int
+unsigned int
 scc_rdgp_1 (prdg_p g, int max_f);
 
 /* Change the directions of all edges.  */
 
-static void
+void
 transpose_rdgp (prdg_p g);
 
 
@@ -347,88 +350,114 @@ transpose_rdgp (prdg_p g);
 //////////////////////////////////////
 unsigned int lower_bound(std::vector<prdg_vertex_p> sorted_vertices,prdg_vertex_p v);
 ///////////////////
-static unsigned int
+unsigned int
 scc_rdgp (prdg_p g);
 //////////////////////////////////
 
 
-static unsigned int
+unsigned int
 scc_rdgp (prdg_p g);
 
 
 
-static bool
+bool
 vertex_in_partition_p (rdg_vertex_p v, int p);
 
 
-static bool
+bool
 vertex_in_scc_p (rdg_vertex_p v, int s);
 
 
 
-static prdg_vertex_p
+prdg_vertex_p
 new_prdg_vertex (unsigned int p);
 
 
-static void
+void
 free_prdg_vertex (prdg_vertex_p v);
 
 
-static prdg_edge_p
+prdg_edge_p
 new_prdg_edge (rdg_edge_p re, 
 	       prdg_vertex_p sink,
                prdg_vertex_p source);
 
-static void
+void
 free_prdg_edge (prdg_edge_p e);
 
 
-static prdg_p
+prdg_p
 new_prdg (rdg_p rdg);
 
-static void
+void
 free_prdg (prdg_p g);
 
 //////////NOTICE LOOP STRUCT//////
 
-static prdg_p
+prdg_p
 build_scc_graph (prdg_p g);
 
-
-
-static bool
+bool
 can_recompute_vertex_p (rdg_vertex_p v);
 
 
-static void
+void
 one_prdg (rdg_p rdg, rdg_vertex_p v, int p);
 
 
-static bool
+bool
 correct_partitions_p (rdg_p rdg, int p);
 
-static unsigned int
+unsigned int
 mark_partitions (rdg_p rdg);
 
 
-static prdg_p
+prdg_p
 build_prdg (rdg_p rdg);
 
 
-static rdg_vertex_p
+rdg_vertex_p
 find_vertex_with_instrs (rdg_p rdg, Instruction instrs);
 
 
-static bool
+bool
 contains_dr_p (Instruction instrs, ddr_p dp);
 
-static int
+
+//////////////////////////////////
+// TODO
+/*
+int
+DG::number_of_vertices (rdg_p rdg);
+*/
+//////////////////////////////////
+int
 number_of_vertices (rdg_p rdg);
 
+int
+DG::number_of_edges (rdg_p rdg);
 
-static void
+void
 create_vertices (rdg_p rdg);
+
+void 
+create_edges (rdg_p rdg);
+
+rdg_p
+build_rdg (Loop *loop_nest);
 
 //static int
 //number_of_data_dependences (rdg_p rdg);
+
+void do_distribution (Loop *loop_nest)
+
+////// DUMP FUNCTIONS /////////////////
+void open_loop_dump (Loop *loop_nest)
+void close_loop_dump (Loop *loop_nest)
+///////////////////////////////////////
+void
+dump_prdg (FILE *outf, prdg_p rdgp);
+
+void
+dump_rdg (FILE *outf, rdg_p rdg);
 

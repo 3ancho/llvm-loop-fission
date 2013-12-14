@@ -1,7 +1,7 @@
 #include "gene_scc.h"
 /* Helper function for Depth First Search.  */
 
-static void
+void
 dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned int scc)
 {
   unsigned int i;
@@ -62,7 +62,7 @@ dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned int scc)
    described in Cormen et al., "Introduction to Algorithms", MIT Press.
    Returns the max of "finishing times" for the partition graph G.  */
 
-static int
+int
 dfs_rdgp (prdg_p g)
 {
   unsigned int i;
@@ -90,7 +90,7 @@ dfs_rdgp (prdg_p g)
 /* Comparison function to compare "finishing times" of
    two vertices.  */
 
-static bool
+bool
 rdgp_vertex_less_than_p (const prdg_vertex_p a,
                          const prdg_vertex_p b)
 {
@@ -108,7 +108,7 @@ unsigned int lower_bound(std::vector<prdg_vertex_p> sorted_vertices, prdg_vertex
 }
 
 
-static unsigned int
+unsigned int
 scc_rdgp_1 (prdg_p g, int max_f)
 {
   unsigned int i;
@@ -169,7 +169,7 @@ scc_rdgp_1 (prdg_p g, int max_f)
 
 /* Change the directions of all edges.  */
 
-static void
+void
 transpose_rdgp (prdg_p g)
 {
   unsigned int i;
@@ -188,7 +188,7 @@ transpose_rdgp (prdg_p g)
 
 /* Computes the strongly connected components of G.  */
 
-static unsigned int
+unsigned int
 scc_rdgp (prdg_p g)
 {
   unsigned int nb_sccs;
@@ -202,7 +202,7 @@ scc_rdgp (prdg_p g)
   return nb_sccs;
 }
 
-static bool
+bool
 vertex_in_partition_p (rdg_vertex_p v, int p)
 {
   int i;
@@ -218,7 +218,7 @@ vertex_in_partition_p (rdg_vertex_p v, int p)
 }
 
 
-static bool
+bool
 vertex_in_scc_p (rdg_vertex_p v, int s)
 {
   int i;
@@ -232,7 +232,7 @@ vertex_in_scc_p (rdg_vertex_p v, int s)
   return false;
 }
 
-static prdg_vertex_p
+prdg_vertex_p
 new_prdg_vertex (unsigned int p)
 {
   prdg_vertex_p v;
@@ -247,7 +247,7 @@ new_prdg_vertex (unsigned int p)
   return v;
 }
 
-static void
+void
 free_prdg_vertex (prdg_vertex_p v)
 {
     PRDGV_PV (v).~vector();
@@ -255,7 +255,7 @@ free_prdg_vertex (prdg_vertex_p v)
 }
 
 
-static prdg_edge_p
+prdg_edge_p
 new_prdg_edge (rdg_edge_p re, 
 	       prdg_vertex_p sink,
                prdg_vertex_p source)
@@ -270,14 +270,14 @@ new_prdg_edge (rdg_edge_p re,
   return e;
 }
 
-static void
+void
 free_prdg_edge (prdg_edge_p e)
 {
   delete e;
 }
 
 
-static prdg_p
+prdg_p
 new_prdg (rdg_p rdg)
 {
   prdg_p rdgp = new (struct prdg);
@@ -290,7 +290,7 @@ new_prdg (rdg_p rdg)
 }
 
 
-static void
+void
 free_prdg (prdg_p g)
 {
 //  unsigned int i;
@@ -313,7 +313,7 @@ free_prdg (prdg_p g)
    delete g;
 }
 
-static prdg_p
+prdg_p
 build_scc_graph (prdg_p g)
 {
   prdg_p sccg;
@@ -372,7 +372,7 @@ build_scc_graph (prdg_p g)
   return sccg;
 }
 
-static bool
+bool
 can_recompute_vertex_p (rdg_vertex_p v)
 {
   rdg_edge_p in_edge;
@@ -392,7 +392,7 @@ can_recompute_vertex_p (rdg_vertex_p v)
   return true;
 }
 
-static void
+void
 one_prdg (rdg_p rdg, rdg_vertex_p v, int p)
 {
   rdg_edge_p o_edge, i_edge;
@@ -422,7 +422,7 @@ one_prdg (rdg_p rdg, rdg_vertex_p v, int p)
 
 
 
-static bool
+bool
 correct_partitions_p (rdg_p rdg, int p)
 {
   unsigned int i;
@@ -447,7 +447,7 @@ correct_partitions_p (rdg_p rdg, int p)
 }
 
 
-static unsigned int
+unsigned int
 mark_partitions (rdg_p rdg)
 {
   rdg_vertex_p rdg_v;
@@ -495,7 +495,7 @@ mark_partitions (rdg_p rdg)
 }
 
 
-static prdg_p
+prdg_p
 build_prdg (rdg_p rdg)
 {
   unsigned int i, j;
@@ -549,10 +549,29 @@ build_prdg (rdg_p rdg)
 
 //////////////////NEED TO BUILD DUMP FUNCTIONS ////////////
 
+/*
+static void
+open_loop_dump (Loop *loop_nest)
+{
+  if (dump_file)
+    {
+      fprintf (dump_file , "<LOOP num=\"%d\">\n", loop_nest->num);
+      dump_loop_infos (dump_file, loop_nest);
+    }  
+}
+
+static void
+close_loop_dump (void)
+{
+  if (dump_file)
+    fprintf (dump_file, "</LOOP>\n");
+}
+*/
+
 //////////////END NEED TO BUILD DUMP FUNCTIONS ////////////
 
 
-static rdg_vertex_p
+rdg_vertex_p
 find_vertex_with_instrs (rdg_p rdg, Instruction instrs)
 {
   rdg_vertex_p vertex = NULL;
@@ -565,8 +584,7 @@ find_vertex_with_instrs (rdg_p rdg, Instruction instrs)
   return vertex;
 }
 
-
-static bool
+bool
 contains_dr_p ( Instruction instrs, std::vector<ddr_p> pddr)
 {
   ddr_p dd;
@@ -583,8 +601,15 @@ contains_dr_p ( Instruction instrs, std::vector<ddr_p> pddr)
 
 }
 
-
-static int
+///////////////////////////////////////
+// TODO
+/*
+int
+DG::number_of_vertices (rdg_p rdg)
+  return numOfNodes(RDG_LOOP(rdg));
+*/
+//////////////////////////////////////
+int
 number_of_vertices (rdg_p rdg)
 {
   BasicBlock bb;
@@ -613,8 +638,7 @@ number_of_vertices (rdg_p rdg)
 }
 
 
-
-static void
+void
 create_vertices (rdg_p rdg)
 {
 //  BasicBlock *bbs;
@@ -654,6 +678,200 @@ create_vertices (rdg_p rdg)
         }
     }
 //  free (bbs);
+}
+
+int
+DG::number_of_edges (rdg_p rdg)
+  return numOfDeps(RDG_LOOP(rdg));
+
+/* Creates all the edges of a RDG.  */
+void
+create_edges (rdg_p rdg)
+{
+  unsigned int i;
+  unsigned int j;
+  unsigned int edge_index;
+//  unsigned int data_edges;
+//  unsigned int scalar_edges;
+  unsigned int edges;
+  ddr_p ddrp;
+
+/*
+  scalar_edges = number_of_scalar_dependences (rdg);  
+  data_edges = number_of_data_dependences (rdg);
+  
+  if (scalar_edges == 0 && data_edges == 0)
+    {
+      RDG_NBE (rdg) = 0;
+      RDG_E (rdg) = NULL;
+      return;
+   }  
+*/
+  /* Allocate an array for scalar edges and data edges.  */
+//  RDG_NBE (rdg) = scalar_edges + data_edges;
+//  RDG_E (rdg) = XCNEWVEC (struct rdg_edge, RDG_NBE (rdg));
+
+  edges = number_of_edges (rdg);
+  if (edges == 0) {
+      RDG_NBE (rdg) = 0;
+      RDG_E (rdg) = NULL;
+      return;
+  }
+
+  RDG_NBE (rdg) = edges;
+  RDG_E (rdg) = XCNEWVEC (struct rdg_edge, RDG_NBE (rdg));
+
+  /* Create data edges.  */
+  edge_index = 0;
+ 
+/* 
+  for (i = 0; VEC_iterate (ddr_p, RDG_DDR (rdg), i, ddr); i++)
+    if (DDR_ARE_DEPENDENT (ddr) == NULL_TREE) 
+      for (j = 0; j < DDR_NUM_DIST_VECTS (ddr); j++)
+//TODO: don't understand
+        update_edge_with_ddv (ddr, j, rdg, edge_index++);
+*/
+  for (int iter = 0; iter < vector_size; ++iter){
+   update_edge_with_ddv(ddrp, ddrp[iter], rdg, edge_index++); 
+  }
+
+  /* Create scalar edges. The principle is as follows: for each vertex, 
+     if the vertex represents a MODIFY_EXPR (an assignment), we create one
+     edge for each use of the SSA_NAME on the LHS. This edge
+     represents a flow scalar dependence of level 0.  */
+  
+/*
+  for (i = 0; i < RDG_NBV (rdg); i++)
+    {
+      rdg_vertex_p def_vertex = RDG_VERTEX (rdg, i);
+      tree stmt = RDGV_STMT (def_vertex);
+
+      if (TREE_CODE (stmt) == MODIFY_EXPR)
+        {
+          tree lhs = TREE_OPERAND (stmt, 0);
+	
+          if (TREE_CODE (lhs) == SSA_NAME)
+            {
+              use_operand_p imm_use_p;
+              imm_use_iterator iterator;
+           
+              FOR_EACH_IMM_USE_FAST (imm_use_p, iterator, lhs)
+                {
+                  rdg_vertex_p use_vertex;
+		  
+		  use_vertex = find_vertex_with_stmt (rdg, 
+						      USE_STMT (imm_use_p));
+	*/	  
+		  /* If use_vertex != NULL, it means that there is a vertex
+		     in the RDG that uses the value defined in 
+		     def_vertex.  */
+
+/*
+                  if (use_vertex) 
+		    {
+		      rdg_edge_p edge = RDG_EDGE (rdg, edge_index);
+		    
+		      RDGE_LEVEL (edge) = 0;
+		      RDGE_SINK (edge) = use_vertex;
+                      RDGE_SOURCE (edge) = def_vertex;
+                      RDGE_SINK_REF (edge) = *(imm_use_p->use);
+                      RDGE_SOURCE_REF (edge) = lhs;
+                      RDGE_COLOR (edge) = 0;
+                      RDGE_TYPE (edge) = flow_dd;
+		      RDGE_SCALAR_P (edge) = true;
+		      VEC_safe_push (rdg_edge_p, heap, 
+                                     RDGV_IN (use_vertex), edge);
+		      VEC_safe_push (rdg_edge_p, heap, 
+                                     RDGV_OUT (def_vertex), edge);
+                      edge_index++;
+                    }
+                }
+            }  
+        }
+    }
+*/
+
+//  gcc_assert (edge_index == RDG_NBE (rdg));
+
+}
+
+/* Creates an edge with a data dependence vector.  */
+
+update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
+                      unsigned int index_of_edge)
+{
+  Instruction *a;
+  Instruction *b;
+  rdg_edge_p edge = RDG_EDGE (rdg, index_of_edge);
+  rdg_vertex_p va;
+  rdg_vertex_p vb;
+  
+
+  /* Invert data references according to the direction of the 
+     dependence.  */
+/*
+  if (DDR_REVERSE_P (ddr))
+    {
+      dra = DDR_B (ddr);
+      drb = DDR_A (ddr);
+    }
+  else
+    {
+      dra = DDR_A (ddr);
+      drb = DDR_B (ddr);
+    }
+*/
+
+  /* Locate the vertices containing the statements that contain
+     the data references.  */
+  va = find_vertex_with_stmt (rdg, a);
+  vb = find_vertex_with_stmt (rdg, b);
+//  gcc_assert (va && vb);
+
+  /* Update source and sink of the dependence.  */
+  RDGE_SOURCE (edge) = va;
+  RDGE_SINK (edge) = vb;
+//  RDGE_SOURCE_REF (edge) = DR_REF (dra);
+//  RDGE_SINK_REF (edge) = DR_REF (drb);
+  
+  /* Determines the type of the data dependence.  */
+/*
+  if (DR_IS_READ (dra) && DR_IS_READ (drb))
+    RDGE_TYPE (edge) = input_dd;
+  else if (!DR_IS_READ (dra) && !DR_IS_READ (drb))
+    RDGE_TYPE (edge) = output_dd;
+  else if (!DR_IS_READ (dra) && DR_IS_READ (drb))
+    RDGE_TYPE (edge) = flow_dd;
+  else if (DR_IS_READ (dra) && !DR_IS_READ (drb))
+    RDGE_TYPE (edge) = anti_dd;
+
+  RDGE_LEVEL (edge) = get_dependence_level (DDR_DIST_VECT (ddr, 
+                                                           index_of_vector), 
+					    DDR_NB_LOOPS (ddr));
+*/
+  RDGE_COLOR (edge) = 0;
+  RDGE_SCALAR_P (edge) = false;
+  
+//  VEC_safe_push (rdg_edge_p, heap, RDGV_OUT (va), edge);
+//  VEC_safe_push (rdg_edge_p, heap, RDGV_IN (vb), edge);
+  RDGV_OUT(va).push_back(edge);
+  RDGV_IN(vb).push_back(edge);
+}
+
+/* Find the vertex containing a given statement in a RDG or return NULL
+   if the statement is not in any vertex.  */
+
+rdg_vertex_p
+find_vertex_with_stmt (rdg_p rdg, Instruction *insn)
+{
+  rdg_vertex_p vertex = NULL;
+  unsigned int i;
+  
+  for (i = 0; i < RDG_NBV (rdg) && vertex == NULL; i++)
+    if (RDGV_STMT (RDG_VERTEX (rdg,i)) == insn)
+      vertex = RDG_VERTEX (rdg, i);
+  
+  return vertex;
 }
 
 /*
@@ -697,3 +915,291 @@ compute_data_dependences_for_loop (Loop *loop_nest)
 
 }
 
+/* Build a Reduced Dependence Graph with one vertex per statement of the
+   loop nest and one edge per data dependence or scalar dependence.  */
+
+rdg_p
+build_rdg (Loop *loop_nest)
+{
+  rdg_p rdg;
+  std::vector<ddr> *dependence_relations;
+  std::vector<rdg_vertex_p> dd_vertices;
+  unsigned int i;
+  rdg_vertex_p vertex;
+  
+  /* Compute array data dependence relations */
+
+/*
+  dependence_relations = VEC_alloc (ddr_p, heap, RDG_VS * RDG_VS) ;
+  datarefs = VEC_alloc (data_reference_p, heap, RDG_VS);
+  compute_data_dependences_for_loop (loop_nest, 
+                                     false,
+                                     &datarefs,
+                                     &dependence_relations);
+*/  
+  /* Check if all the array dependences are known (computable) */
+/*
+  if (!known_dependences_p (dependence_relations))
+    {
+      dump_check_info ("Dependences: not computable");
+      free_dependence_relations (dependence_relations);
+      free_data_refs (datarefs);
+      return NULL;
+    }
+  else
+    dump_check_info ("Dependences: OK");
+*/  
+
+  /* OK, now we know that we can build our Reduced Dependence Graph
+     where each vertex is a statement and where each edge is a data
+     dependence between two references in statements. */
+  rdg = XNEW (struct rdg);
+  RDG_LOOP (rdg) = loop_nest;
+// not really used
+/*
+  RDG_EXIT_COND (rdg) = get_loop_exit_condition (loop_nest);
+  RDG_IDX (rdg) = get_loop_index (loop_nest);
+  RDG_IDX_UPDATE (rdg) = SSA_NAME_DEF_STMT (RDG_IDX (rdg));
+  RDG_IDX_PHI (rdg) = get_index_phi_node (loop_nest);
+*/
+
+//  RDG_DDR (rdg) = dependence_relations;
+  RDG_DDR (rdg) = compute_data_dependences_for_loop (loop_nest) 
+//  RDG_DR (rdg) = datarefs;
+  
+  create_vertices (rdg);
+  create_edges (rdg);
+
+/*
+  RDG_DDV (rdg) = VEC_alloc (rdg_vertex_p, heap, RDG_VS);
+  
+  for (i = 0; i < RDG_NBV (rdg); i++)
+    {
+      vertex = RDG_VERTEX (rdg, i);
+
+      if (RDGV_DD_P (vertex))
+	VEC_safe_push (rdg_vertex_p, heap, RDG_DDV (rdg), vertex);
+    }
+  */  
+
+  for (i = 0; i < RDG_NBV (rdg); i++)
+    {
+      vertex = RDG_VERTEX (rdg, i);
+
+      if (RDGV_DD_P (vertex))
+//	VEC_safe_push (rdg_vertex_p, heap, RDG_DDV (rdg), vertex);
+        RDG_DDV (rdg).push_back(vertex);
+    }
+
+  return rdg;
+}
+
+/* Do the actual loop distribution. */
+
+void
+do_distribution (Loop *loop_nest)
+{
+  rdg_p rdg; /* Reduced dependence graph.  */
+  prdg_p rdgp; /* Graph of RDG partitions.  */
+  prdg_p sccg; /* Graph of Strongly Connected Components.  */
+  std::vector <prdg_vertex_p> dloops; /* Distributed loops.  */
+  
+  bool dump_file = 0;
+
+//  open_loop_dump (loop_nest);
+
+  /* Check whether a RDG can be build for this loop nest or not */
+/*
+  if (!loop_is_good_p (loop_nest))
+    {
+      close_loop_dump ();
+      return;
+    }
+*/
+  rdg = build_rdg (loop_nest);
+  
+  if (!rdg)
+    {
+      close_loop_dump ();
+      return;
+    }
+  
+  if (dump_file)
+    {
+      fprintf (dump_file, "<rdg>\n");
+      dump_rdg (dump_file, rdg);
+      fprintf (dump_file, "</rdg>\n");
+    }
+
+  rdgp = build_prdg (rdg);      
+  
+  if (dump_file)
+    {
+      fprintf (dump_file, "<prdg>\n");
+      dump_prdg (dump_file, rdgp);
+      fprintf (dump_file, "</prdg>\n");
+    }
+  
+  sccg = build_scc_graph (rdgp);
+
+  if (dump_file)
+    {
+      fprintf (dump_file, "<sccp>\n");
+      dump_prdg (dump_file, sccg);
+      fprintf (dump_file, "</sccp>\n");
+    }
+  
+  dloops = topological_sort (sccg);
+
+  if (dump_file)
+    {
+      prdg_vertex_p v;
+      int i;
+      
+      fprintf (dump_file, "<topological_sort>\n");
+      
+      for (i = 0; VEC_iterate (prdg_vertex_p, dloops, i, v); i++)
+        fprintf (dump_file, "  <dloop n=\"%d\">P%d</dloop>\n", 
+                 i, PRDGV_N (v));
+      
+      fprintf (dump_file, "</topological_sort>\n");
+    }
+
+ /* 
+  free_rdg (rdg);
+  free_prdg (rdgp);
+  free_prdg (sccg);
+  VEC_free (prdg_vertex_p, heap, dloops);
+*/
+  close_loop_dump ();
+}
+
+
+void
+dump_prdg (FILE *outf, prdg_p rdgp)
+{
+  unsigned int p, i;
+  prdg_vertex_p pv;
+  prdg_edge_p pe;
+  rdg_vertex_p v;
+
+  fprintf (outf, "<graphviz><![CDATA[\n");
+  fprintf (outf, "digraph ");
+//  print_generic_expr (outf, RDG_IDX (PRDG_RDG (rdgp)), 0);
+  fprintf (outf, " {\n");
+    
+  /* Print out vertices. Each vertex represents a partition, then it
+    can contain several statements.  */
+//  for (p = 0; VEC_iterate (prdg_vertex_p, PRDG_V (rdgp), p, pv); p++)
+  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (rdgp)).begin();it!=(PRDG_V (rdgp)).end();++it)
+    {
+	pv = *it;
+      fprintf (outf, " P%d [ shape=rect,label = \" P%d(%d): ", 
+	       PRDGV_N (pv), PRDGV_N (pv), PRDGV_SCC (pv));
+    
+//      for (i = 0; VEC_iterate (rdg_vertex_p, PRDGV_PV (pv), i, v); i++)
+      for (std::vector<rdg_vertex_p>::iterator it=(PRDGV_PV (pv)).begin();it!=(PRDGV_PV (pv)).end();++it )
+      {
+	v = *it;
+	fprintf (outf, "S%d;", RDGV_N (v));
+      } 
+      fprintf (outf, "\"];\n");
+    
+      fprintf (outf, " v%d [ label = \" P%d(%d)",  PRDGV_N (pv), 
+               PRDGV_N (pv), PRDGV_SCC (pv));   
+      
+      fprintf (outf, "\"];\n");
+      
+      fprintf (outf, "{rank=same; P%d; v%d; }\n",  PRDGV_N (pv), PRDGV_N (pv)); 
+    } 
+  
+//  for (i = 0; VEC_iterate (prdg_edge_p, PRDG_E (rdgp), i, pe); i++)
+  for (std::vector<prdg_edge_p>::iterator it=(PRDG_E (rdgp)).begin();it!=(PRDG_E (rdgp)).end();++it)
+  {
+	pe = *it;
+    fprintf (outf, "v%d -> v%d [style=dotted];\n",
+	     PRDGV_N (PRDGE_SOURCE (pe)),
+	     PRDGV_N (PRDGE_SINK (pe)) 
+	     );
+
+/*    fprintf (outf, "v%d -> v%d [label=\"%c:%d\" style=dotted];\n",
+	     PRDGV_N (PRDGE_SOURCE (pe)),
+	     PRDGV_N (PRDGE_SINK (pe)),
+	     RDGE_TYPE (PRDGE_RDG_EDGE (pe)), 
+	     RDGE_LEVEL (PRDGE_RDG_EDGE (pe)));*/
+  }
+  fprintf (outf, "}\n");
+  fprintf (outf, "]]></graphviz>\n");
+}
+
+
+
+void
+dump_rdg (FILE *outf, rdg_p rdg)
+{
+  unsigned int i;
+  rdg_vertex_p vertex;
+  
+  fprintf (outf, "<graphviz><![CDATA[\n");
+  fprintf (outf, "digraph ");
+//  print_generic_expr (outf, RDG_IDX (rdg), 0);
+  fprintf (outf, " {\n");
+  
+  for (i = 0; i < RDG_NBV (rdg); i++)
+    { 
+      rdg_vertex_p v = RDG_VERTEX (rdg, i);
+    
+      fprintf (outf, " v%d [ label = \"", RDGV_N (v));
+      fprintf (outf, "S%d : ", RDGV_N (v));
+      fprintf (outf, "instrs%s",RDGV_INSTRS (v));
+      fprintf (outf, "\"");
+      
+      if (RDGV_DD_P (v))
+	fprintf (outf, " shape=rect style=filled color=\".7 .3 1.0\"]");
+      else
+	fprintf (outf, " shape=rect]");	
+      
+      fprintf (outf, ";\n");
+    }
+  
+  for (i = 0; i < RDG_NBE (rdg); i++)
+    {
+      struct rdg_edge *e = RDG_EDGE (rdg, i);
+      struct rdg_vertex *sink = RDGE_SINK (e);
+      struct rdg_vertex *source = RDGE_SOURCE (e);
+      
+      fprintf (outf, " v%d -> v%d", RDGV_N (source), RDGV_N (sink));      
+//      fprintf (outf, " [ label=\"%c:%d", RDGE_TYPE (e), RDGE_LEVEL (e));
+/*   
+      if (RDGE_SCALAR_P (e))
+        fprintf (outf, " d=0");
+      else
+        fprintf (outf, " d=x");
+      
+      fprintf(outf, "\" ");
+*/      
+      /* TODO: Here, it is not the level that matters...
+         In fact, it is the dimension of the dependence, a dependence
+         of level=0 with a dimension=1 can be stored and
+         then can be broken.  */
+//      if (RDGE_LEVEL (e) > 0)
+//        fprintf (outf, " style=dotted");
+      
+     fprintf(outf, "]\n");
+    }
+  
+  fprintf (outf, "}\n");
+  fprintf (outf, "]]></graphviz>\n");
+  fprintf (outf, "<dd_vertices>\n");
+  
+//  for (i = 0; VEC_iterate (rdg_vertex_p, RDG_DDV (rdg), i, vertex); i++)
+  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg)).begin();it!=(RDG_DDV (rdg)).end();++it)
+    {
+	 vertex = *it;
+      fprintf (outf, "<dd_vertex s=\"s%d\">", RDGV_N (vertex));
+      print_generic_expr (outf, RDGV_STMT (vertex), 0);
+      fprintf (outf, "</dd_vertex>\n");
+    }
+
+  fprintf (outf, "</dd_vertices>\n");
+}
