@@ -1,61 +1,7 @@
-/*
-This is an LLVM analysis pass which retrieves, for each loop in a function, the 
-data and memory dependence information of all pairs of instructions. The resulted
-dependence graph is saved in the following data structure:
-        
-Loop1-------->  
-              Source  ------->  Destinations 
-			  (all instructions in the destation set of a source instruction
-			  has dependence to the source, thus need to succeed the source. ) 
-              inst1---------->  {inst1i, inst1j, inst1k,...}
-			  inst2---------->  {inst2i, inst2j, inst2k,...}
-			  inst3---------->  {inst3i, inst3j, inst3k,...}
-			  ...
-Loop2-------->
-              inst10--------->  {inst10i, inst10j, inst10k,...}
-			  ...
-...
-Loopn-------->
-              ...
-*/
+#include <algorithm>
+#include "DG.h"
 
-#define DEBUG_TYPE "dg"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Instruction.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/DependenceAnalysis.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/InstIterator.h"
-#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Analysis/LoopPass.h"
 using namespace llvm;
-
-namespace {
-
-  class DG : public FunctionPass {
-  private:
-    AliasAnalysis *AA;
-    Function *F;
-    DependenceAnalysis *DA;
-    LoopInfo *LI;
-    std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLoops;
-    std::map<Loop*, int> numOfNodes;
-    std::map<Loop*, int> numOfDeps;
-
-  public:
-    static char ID; 
-    DG() : FunctionPass(ID) {};
-    bool runOnFunction(Function &F);
-    void getAnalysisUsage(AnalysisUsage &) const;
-    void printDG();
-    void buildDG(Loop *);
-  }; // class DG
-} // namespace llvm
-
 
 static RegisterPass<DG> X("dg", "583 - data dependence graph of loops in a function");
 char DG::ID = 0;
@@ -162,12 +108,5 @@ void DG::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequiredTransitive<AliasAnalysis>();
   AU.addRequiredTransitive<DependenceAnalysis>();
   AU.addRequired<LoopInfo>();
-  AU.addPreserved<LoopInfo>();
+  //AU.addPreserved<LoopInfo>();
 }
-
-
-
-
-
-
-
