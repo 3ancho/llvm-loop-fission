@@ -29,14 +29,15 @@ typedef struct prdg_edge *prdg_edge_p;
    constraints between the statements of a loop nest. */
 
 //////////// data structure that we need to construct/////////
-//////loop tree VEC
+
+
 struct rdg 
 {
 /////////////////////NOTICE: COMMENT OUT BUT SHOULD BE NEEDED IN THE FUTURE
-/* 
+
   // The loop nest represented by this RDG.  
-  struct loop *loop_nest;
-  
+  Loop *loop_nest;
+/*   
   // The SSA_NAME used for loop index.  
   tree loop_index;
   
@@ -67,11 +68,15 @@ struct rdg
   /* Data references and array data dependence relations.  */
 //////////////// NOTICE///////////////
 //  VEC (ddr_p, heap) *dependence_relations;
+  std::vector<ddr_p> dependence_relations;
+
+//  std::vector<ddr> dependence_relations;
 /////////////NOTICE///////////
 //  VEC (data_reference_p, heap) *datarefs;
+//  std::vector<data_reference_p> datarefs;
 };
 
-//#define RDG_LOOP(G)	  (G)->loop_nest
+#define RDG_LOOP(G)	  (G)->loop_nest
 //#define RDG_IDX(G)        (G)->loop_index
 //#define RDG_IDX_UPDATE(G) (G)->loop_index_update
 //#define RDG_EXIT_COND(G)  (G)->loop_exit_condition
@@ -84,7 +89,7 @@ struct rdg
 #define RDG_EDGE(G,i)     &((G)->edges[i])
 #define RDG_DDV(G)        (G)->dd_vertices
 //#define RDG_DR(G)         (G)->datarefs
-//#define RDG_DDR(G)        (G)->dependence_relations
+#define RDG_DDR(G)        (G)->dependence_relations
 
 
 /* A RDG vertex representing a statement.  */
@@ -99,8 +104,10 @@ struct rdg_vertex
      the statement in the basic block.  */
   unsigned int number;
     /* The statement represented by this vertex.  */
+////////////////TODO it as instruction
 //  tree stmt;
-  
+ 	struct INSTRUCTION instrs;
+/////////////////// 
   /* True when this vertex contains a data reference 
      that is an ARRAY_REF.  */
   bool has_dd_p; 
@@ -129,14 +136,23 @@ struct rdg_vertex
 #define RDGV_COLOR(V)      (V)->color
 #define RDGV_BB(V)         (V)->bb_number
 #define RDGV_N(V)          (V)->number
-//#define RDGV_STMT(V)       (V)->stmt
+#define RDGV_INSTRS(V)     (V)->instrs
 #define RDGV_DD_P(V)       (V)->has_dd_p
 #define RDGV_IN(V)         (V)->in_edges
 #define RDGV_OUT(V)        (V)->out_edges
 #define RDGV_PARTITIONS(V) (V)->partition_numbers
 #define RDGV_SCCS(V)       (V)->scc_numbers
 
+struct data_dependence_relation
+{
+  Instruction *a;
+  Instruction *b;
+}
 
+typedef struct data_dependence_relation ddr;
+typedef struct data_dependence_relation *ddr_p;
+
+std::vector<ddr> compute_data_dependences_for_loop (Loop *loop_nest);
 
 /* Data dependence type.  */
 /////////////?NOTICE:DO WE DIFFER DEP TYPE? OR we only build edge if dep existing
@@ -169,7 +185,7 @@ struct rdg_edge
   /* The vertex sink of the dependence.  */
   rdg_vertex_p sink;
 
-/////////NOTICE: ? not quite understand these reference things 
+/////////NOTICE: ? not quiet understand these reference things 
 //  /* The reference source of the dependence.  */
 //  tree source_ref;
   
@@ -220,12 +236,12 @@ struct prdg
 
 
 #define PRDG_RDG(G)       (G)->rdg
-#define PRDG_NBV(G)       VEC_length (prdg_vertex_p,(G)->vertices)
+#define PRDG_NBV(G)       (prdg_vertex_p,(G)->vertices).size()
 #define PRDG_V(G)         (G)->vertices
-#define PRDG_VERTEX(G,i)  VEC_index (prdg_vertex_p,(G)->vertices,i) 
-#define PRDG_NBE(G)       VEC_length (prdg_edge_p,(G)->edges)
+//#define PRDG_VERTEX(G,i)  ((prdg_vertex_p,(G)->vertices).at(i))
+#define PRDG_NBE(G)       (prdg_edge_p,(G)->edges).size()
 #define PRDG_E(G)         (G)->edges
-#define PRDG_EDGE(G,i)    VEC_index (prdg_edge_p,(G)->edges,i)
+//#define PRDG_EDGE(G,i)    ((prdg_edge_p,(G)->edges).at(i))
 
 
 /* A vertex representing a group of RDG vertices.  */
@@ -336,4 +352,83 @@ scc_rdgp (prdg_p g);
 //////////////////////////////////
 
 
+static unsigned int
+scc_rdgp (prdg_p g);
+
+
+
+static bool
+vertex_in_partition_p (rdg_vertex_p v, int p);
+
+
+static bool
+vertex_in_scc_p (rdg_vertex_p v, int s);
+
+
+
+static prdg_vertex_p
+new_prdg_vertex (unsigned int p);
+
+
+static void
+free_prdg_vertex (prdg_vertex_p v);
+
+
+static prdg_edge_p
+new_prdg_edge (rdg_edge_p re, 
+	       prdg_vertex_p sink,
+               prdg_vertex_p source);
+
+static void
+free_prdg_edge (prdg_edge_p e);
+
+
+static prdg_p
+new_prdg (rdg_p rdg);
+
+static void
+free_prdg (prdg_p g);
+
+//////////NOTICE LOOP STRUCT//////
+
+static prdg_p
+build_scc_graph (prdg_p g);
+
+
+
+static bool
+can_recompute_vertex_p (rdg_vertex_p v);
+
+
+static void
+one_prdg (rdg_p rdg, rdg_vertex_p v, int p);
+
+
+static bool
+correct_partitions_p (rdg_p rdg, int p);
+
+static unsigned int
+mark_partitions (rdg_p rdg);
+
+
+static prdg_p
+build_prdg (rdg_p rdg);
+
+
+static rdg_vertex_p
+find_vertex_with_instrs (rdg_p rdg, Instruction instrs);
+
+
+static bool
+contains_dr_p (Instruction instrs, ddr_p dp);
+
+static int
+number_of_vertices (rdg_p rdg);
+
+
+static void
+create_vertices (rdg_p rdg);
+
+//static int
+//number_of_data_dependences (rdg_p rdg);
 

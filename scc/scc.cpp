@@ -136,12 +136,13 @@ typedef struct data_reference *data_reference_p;
 struct data_dependence_relation
 {
   
-  struct data_reference *a;
-  struct data_reference *b;
+//  struct data_reference *a;
+//  struct data_reference *b;
+    Instruction *a, *b;
 
   /* When the dependence relation is affine, it can be represented by
      a distance vector.  */
-  bool affine_p;
+//  bool affine_p;
 
   /* A "yes/no/maybe" field for the dependence relation:
      
@@ -154,21 +155,21 @@ struct data_dependence_relation
      
      - when "ARE_DEPENDENT == chrec_dont_know", there may be a dependence,
        but the analyzer cannot be more specific.  */
-  tree are_dependent;
+//  tree are_dependent;
   
   /* For each subscript in the dependence test, there is an element in
      this array.  This is the attribute that labels the edge A->B of
      the data_dependence_relation.  */
-  VEC (subscript_p, heap) *subscripts;
+//  VEC (subscript_p, heap) *subscripts;
 
   /* The analyzed loop nest.  */
-  VEC (loop_p, heap) *loop_nest;
+//  VEC (loop_p, heap) *loop_nest;
 
   /* The classic direction vector.  */
-  VEC (lambda_vector, heap) *dir_vects;
+//  VEC (lambda_vector, heap) *dir_vects;
 
   /* The classic distance vector.  */
-  VEC (lambda_vector, heap) *dist_vects;
+//  VEC (lambda_vector, heap) *dist_vects;
 };
 
 typedef struct data_dependence_relation *ddr_p;
@@ -1752,6 +1753,13 @@ loop_is_good_p (struct loop *loop_nest)
   return true;
 }
 
+void
+DG::compute_data_dependences_for_loop (Loop *loop_nest) 
+{
+  dependence_relations 
+ 
+}
+
 /* Build a Reduced Dependence Graph with one vertex per statement of the
    loop nest and one edge per data dependence or scalar dependence.  */
 
@@ -1759,7 +1767,7 @@ static rdg_p
 DG::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
-// TODO std::vector *dependence_relations;
+  std::vector<ddr> *dependence_relations;
   unsigned int i;
   rdg_vertex_p vertex;
   
@@ -1791,14 +1799,15 @@ DG::build_rdg (Loop *loop_nest)
   rdg = XNEW (struct rdg);
   RDG_LOOP (rdg) = loop_nest;
 // not really used
-  RDG_EXIT_COND (rdg) = get_loop_exit_condition (loop_nest);
 /*
+  RDG_EXIT_COND (rdg) = get_loop_exit_condition (loop_nest);
   RDG_IDX (rdg) = get_loop_index (loop_nest);
   RDG_IDX_UPDATE (rdg) = SSA_NAME_DEF_STMT (RDG_IDX (rdg));
   RDG_IDX_PHI (rdg) = get_index_phi_node (loop_nest);
 */
 
-  RDG_DDR (rdg) = dependence_relations;
+//  RDG_DDR (rdg) = dependence_relations;
+  RDG_DDR (rdg) = compute_data_dependences_for_loop (loop_nest) 
   RDG_DR (rdg) = datarefs;
   
   create_vertices (rdg);
