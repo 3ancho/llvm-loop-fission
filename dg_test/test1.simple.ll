@@ -1,4 +1,4 @@
-; ModuleID = 'test.simple.bc'
+; ModuleID = 'test1.simple.bc'
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -21,16 +21,20 @@ for.body:                                         ; preds = %for.cond
   %idxprom2 = sext i32 %sub1 to i64
   %arrayidx3 = getelementptr inbounds i32* %A, i64 %idxprom2
   store i32 %sub, i32* %arrayidx3, align 4
-  %add = add nsw i32 %0, 2
-  %add4 = add nsw i32 %storemerge, 1
-  %idxprom5 = sext i32 %add4 to i64
-  %arrayidx6 = getelementptr inbounds i32* %A, i64 %idxprom5
-  store i32 %add, i32* %arrayidx6, align 4
-  %add7 = add nsw i32 %0, 4
-  %add8 = add nsw i32 %storemerge, 2
-  %idxprom9 = sext i32 %add8 to i64
-  %arrayidx10 = getelementptr inbounds i32* %A, i64 %idxprom9
-  store i32 %add7, i32* %arrayidx10, align 4
+  %add = add nsw i32 %0, 1
+  %idxprom4 = sext i32 %storemerge to i64
+  %arrayidx5 = getelementptr inbounds i32* %A, i64 %idxprom4
+  store i32 %add, i32* %arrayidx5, align 4
+  %add6 = add nsw i32 %0, 2
+  %add7 = add nsw i32 %storemerge, 1
+  %idxprom8 = sext i32 %add7 to i64
+  %arrayidx9 = getelementptr inbounds i32* %A, i64 %idxprom8
+  store i32 %add6, i32* %arrayidx9, align 4
+  %add10 = add nsw i32 %0, 4
+  %add11 = add nsw i32 %storemerge, 2
+  %idxprom12 = sext i32 %add11 to i64
+  %arrayidx13 = getelementptr inbounds i32* %A, i64 %idxprom12
+  store i32 %add10, i32* %arrayidx13, align 4
   %inc = add nsw i32 %storemerge, 1
   br label %for.cond
 
