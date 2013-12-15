@@ -44,8 +44,8 @@
 #define RDGV_PARTITIONS(V) (V)->partition_numbers
 #define RDGV_SCCS(V)       (V)->scc_numbers
 
-#define XNEW(T)        ((T *) xmalloc (sizeof (T)))
-#define XCNEWVEC(T, N) ((T *) xcalloc ((N), sizeof (T)))
+#define XNEW(T)        ((T *) malloc (sizeof (T)))
+#define XCNEWVEC(T, N) ((T *) calloc ((N), sizeof (T)))
 
 //////////// RDGE
 #define RDGE_COLOR(E)       (E)->color
@@ -289,7 +289,7 @@ prdg_p build_prdg (rdg_p rdg);
 
 rdg_vertex_p find_vertex_with_instrs (rdg_p rdg, Instruction * instrs);
 
-bool contains_dr_p (Instruction instrs, ddr_p dp);
+bool contains_dr_p ( Instruction instrs, std::vector<ddr_p> pddr);
 
 int number_of_vertices (rdg_p rdg, DG *depmap);
 
@@ -315,6 +315,9 @@ void dump_rdg (FILE *outf, rdg_p rdg);
 
 split_scc out_scc(std::vector <prdg_vertex_p> scc, Loop *loop_nest);
 
+
+void update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
+                      unsigned int index_of_edge);
 //////////////////END functions to generate scc//////////////////
 
 //////////////////scc//////////////////

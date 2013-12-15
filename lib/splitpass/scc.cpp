@@ -546,12 +546,12 @@ unsigned int scc::mark_partitions (rdg_p rdg)
       for (k = 1; k <= p; k++)
 	(RDGV_PARTITIONS (RDG_VERTEX (rdg, i))).push_back(k);
     
-	if(correct_partitions_p (rdg, p)) std::cout<<"wrong partition"<<std::endl;
+	if(correct_partitions_p (rdg, p)) errs()<<"wrong partition\n";
   
   return p;
 }
 
-prdg_p scc:build_prdg (rdg_p rdg)
+prdg_p scc::build_prdg (rdg_p rdg)
 {
   unsigned int i, j;
   rdg_vertex_p rdg_v;  
@@ -597,13 +597,13 @@ prdg_p scc:build_prdg (rdg_p rdg)
   return rdgp;
 }
 
-rdg_vertex_p scc::find_vertex_with_instrs (rdg_p rdg, Instruction instrs)
+rdg_vertex_p scc::find_vertex_with_instrs (rdg_p rdg, Instruction* instrs)
 {
   rdg_vertex_p vertex = NULL;
   unsigned int i;
   
   for (i = 0; i < RDG_NBV (rdg) && vertex == NULL; i++)
-    if (RDGV_INSTRS(RDG_VERTEX (rdg,i)) == instrs)
+    if (RDGV_INSTRS(RDG_VERTEX (rdg,i)) == *instrs)
       vertex = RDG_VERTEX (rdg, i);
   
   return vertex;
@@ -616,7 +616,7 @@ bool scc::contains_dr_p ( Instruction instrs, std::vector<ddr_p> pddr)
     for(std::vector<ddr_p>::iterator it=(pddr).begin();it!=(pddr).end();++it)
     {
 	dd=*it;
-    if (DD_INSTR (dd) == instrs)
+    if ((dd->a) == instrs)
       return true;
     }
   return false;
@@ -633,27 +633,27 @@ int scc::number_of_edges (rdg_p rdg, DG *depmap)
 
 void scc::create_vertices (rdg_p rdg)
 {
-  BasicBlock bb;
+
   unsigned int i;
   unsigned int vertex_index;
   BasicBlock::iterator bsi;
   Loop *loop_nest = RDG_LOOP (rdg);
   
-  RDG_NBV (rdg) = number_of_vertices (rdg);
+  RDG_NBV (rdg) = number_of_vertices (rdg,depmap);
   
   vertex_index = 0;
-  std::vector<BasicBlock * > bbs = loop_nest->getBlocks();
+  llvm::BasicBlock *  bb = loop_nest->getBlocks();
 //////////////////NOTICE/////////getBody!  
-  for (i = 0; i < (loop_nest->getNumBlocks()); i++)
-    {
-      bb = bbs[i];
+//  for (i = 0; i < (loop_nest->getNumBlocks()); i++)
+//    {
+//      bb = bbs[i];
     
       for (bsi = bb->begin(); bsi!= bb->end(); ++bsi)
         {
-	  Instruction instrs = *bsi;
+//	  Instruction instrs = *bsi;
 
               rdg_vertex_p v = RDG_VERTEX (rdg, vertex_index);
-              RDGV_RDGV_INSTRS (v) = instrs;
+              RDGV_INSTRS (v) = *bsi;
               RDGV_N (v) = vertex_index;
               RDGV_BB (v) = i;
               RDGV_COLOR (v) = 0;
@@ -661,7 +661,7 @@ void scc::create_vertices (rdg_p rdg)
               vertex_index++;
 
         }
-    }
+//    }
 }
 
 void scc::create_edges (rdg_p rdg)
@@ -675,7 +675,7 @@ void scc::create_edges (rdg_p rdg)
 
   /* Allocate an array for scalar edges and data edges.  */
 
-  edges = number_of_edges (rdg);
+  edges = number_of_edges (rdg,depmap);
   if (edges == 0) {
       RDG_NBE (rdg) = 0;
       RDG_E (rdg) = NULL;
@@ -688,7 +688,7 @@ void scc::create_edges (rdg_p rdg)
   /* Create data edges.  */
   edge_index = 0;
  
-  for (int iter = 0; iter < vector_size; ++iter){
+  for (int iter = 0; iter < ddrp.size(); ++iter){
    update_edge_with_ddv(ddrp, ddrp[iter], rdg, edge_index++); 
   }
 
@@ -696,7 +696,7 @@ void scc::create_edges (rdg_p rdg)
 
 /* Creates an edge with a data dependence vector.  */
 
-update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
+void scc::update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
                       unsigned int index_of_edge)
 {
   Instruction *a;
@@ -723,8 +723,8 @@ update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
 
   /* Locate the vertices containing the statements that contain
      the data references.  */
-  va = find_vertex_with_stmt (rdg, a);
-  vb = find_vertex_with_stmt (rdg, b);
+  va = find_vertex_with_instrs (rdg, a);
+  vb = find_vertex_with_instrs (rdg, b);
 //  gcc_assert (va && vb);
 
   /* Update source and sink of the dependence.  */
