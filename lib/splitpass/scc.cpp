@@ -526,7 +526,7 @@ unsigned int scc::mark_partitions (rdg_p rdg)
     RDGV_PARTITIONS (RDG_VERTEX (rdg,i)).resize(0);
   
   /* If there are no dd_vertices, put all in one single partition.  */
-  if ((RDG_DDV (rdg)).size() == 0)
+  if ((RDG_DDV (rdg))->size() == 0)
     {
      /* Mark all vertices with p=1.  */
       for (i = 0; i < RDG_NBV (rdg); i++)
@@ -536,7 +536,7 @@ unsigned int scc::mark_partitions (rdg_p rdg)
     }
     
   /* Mark each vertex with its own color and propagate.  */
-  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg)).begin();it!=(RDG_DDV (rdg)).end();++it)
+  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg))->begin();it!=(RDG_DDV (rdg))->end();++it)
     {
 	rdg_v = *it;
      if ( (RDGV_PARTITIONS (rdg_v)).size() == 0)
@@ -613,11 +613,12 @@ rdg_vertex_p scc::find_vertex_with_instrs (rdg_p rdg, Instruction* instrs)
   return vertex;
 }
 
-bool scc::contains_dr_p ( Instruction *instrs, std::vector<ddr_p> pddr)
+//bool scc::contains_dr_p ( Instruction *instrs, std::vector<ddr_p> pddr)
+bool scc::contains_dr_p ( Instruction *instrs, std::vector<ddr_p> *pddr)
 {
   ddr_p dd;
   
-    for(std::vector<ddr_p>::iterator it=(pddr).begin();it!=(pddr).end();++it)
+    for(std::vector<ddr_p>::iterator it=pddr->begin();it!=pddr->end();++it)
     {
 	dd=*it;
     if ((dd->a) == instrs)
@@ -672,8 +673,8 @@ void scc::create_edges (rdg_p rdg)
 {
   unsigned int edge_index;
   unsigned int edges;
-  std::vector<ddr_p> dep_r = rdg->dependence_relations;
-
+  std::vector<ddr_p> *dep_r = rdg->dependence_relations;
+//
   /* Allocate an array for scalar edges and data edges.  */
 
   edges = number_of_edges (rdg,depmap);
@@ -689,8 +690,8 @@ void scc::create_edges (rdg_p rdg)
   /* Create data edges.  */
   edge_index = 0;
  
-  for (unsigned int iter = 0; iter < dep_r.size(); ++iter){
-   update_edge_with_ddv(dep_r[iter], rdg, edge_index++); 
+  for (unsigned int iter = 0; iter < dep_r->size(); ++iter){
+   update_edge_with_ddv((*dep_r)[iter], rdg, edge_index++); 
   }
 
 }
@@ -761,7 +762,7 @@ rdg_p scc::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
   std::vector<ddr_p> *dep_r = new (std::vector<ddr_p>);
-  std::vector<rdg_vertex_p> dd_vertices;
+  std::vector<rdg_vertex_p> *dd_vertices = new (std::vector<rdg_vertex_p>);
   unsigned int i;
   rdg_vertex_p vertex;
   
@@ -787,17 +788,7 @@ rdg_p scc::build_rdg (Loop *loop_nest)
     }
   }
 
-  errs() << "1\n" ;
-  errs() << RDG_DDR(rdg).size();
-  errs() << dep_r->size();
-  errs() << (*dep_r)[0];
-  errs() << "1\n" ;
-  
-  for (i = 0; i < dep_r->size(); i++){
-    RDG_DDR(rdg).push_back((*dep_r)[i]);
-  }
-//  RDG_DDR (rdg) = *dep_r;
-//  compute_data_dependences_for_loop (loop_nest, depmap, dep_r); 
+  RDG_DDR(rdg) = dep_r;
   
   create_vertices (rdg);
   create_edges (rdg);
@@ -808,8 +799,10 @@ rdg_p scc::build_rdg (Loop *loop_nest)
 
       if (RDGV_DD_P (vertex))
 //	VEC_safe_push (rdg_vertex_p, heap, RDG_DDV (rdg), vertex);
-        RDG_DDV (rdg).push_back(vertex);
+        dd_vertices->push_back(vertex);
     }
+
+   RDG_DDV(rdg) = dd_vertices;
 
   return rdg;
 }
@@ -963,7 +956,7 @@ scc::dump_rdg (FILE *outf, rdg_p rdg)
   fprintf (outf, "]]></graphviz>\n");
   fprintf (outf, "<dd_vertices>\n");
   
-  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg)).begin();it!=(RDG_DDV (rdg)).end();++it)
+  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg))->begin();it!=(RDG_DDV (rdg))->end();++it)
     {
 	 vertex = *it;
       fprintf (outf, "<dd_vertex s=\"s%d\">", RDGV_N (vertex));
