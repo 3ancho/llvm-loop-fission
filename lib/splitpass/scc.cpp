@@ -760,7 +760,7 @@ void scc::update_edge_with_ddv (ddr_p ddr0, rdg_p rdg, unsigned int index_of_edg
 rdg_p scc::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
-//  std::vector<ddr_p> *dep_r = new (std::vector<ddr_p>);
+  std::vector<ddr_p> *dep_r = new (std::vector<ddr_p>);
   std::vector<rdg_vertex_p> dd_vertices;
   unsigned int i;
   rdg_vertex_p vertex;
@@ -783,10 +783,20 @@ rdg_p scc::build_rdg (Loop *loop_nest)
       ddr_p s = new (ddr);
       s->a = inst;
       s->b = *setit;
-      errs() << "123\n";
-      RDG_DDR (rdg).push_back(s);
+      dep_r->push_back(s);
     }
   }
+
+  errs() << "1\n" ;
+  errs() << RDG_DDR(rdg).size();
+  errs() << dep_r->size();
+  errs() << (*dep_r)[0];
+  errs() << "1\n" ;
+  
+  for (i = 0; i < dep_r->size(); i++){
+    RDG_DDR(rdg).push_back((*dep_r)[i]);
+  }
+//  RDG_DDR (rdg) = *dep_r;
 //  compute_data_dependences_for_loop (loop_nest, depmap, dep_r); 
   
   create_vertices (rdg);
