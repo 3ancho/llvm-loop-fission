@@ -298,6 +298,7 @@ prdg_vertex_p scc::new_prdg_vertex (unsigned int p)
   PRDGV_F (v) = 0;
   PRDGV_PRED (v) = NULL;
   PRDGV_SCC (v) = 0;
+  PRDGV_PV (v) = XNEW(std::vector<rdg_vertex_p>);
   return v;
 }
 
@@ -332,6 +333,8 @@ prdg_p scc::new_prdg (rdg_p rdg)
   prdg_p rdgp = new (struct prdg);
 
   PRDG_RDG (rdgp) = rdg;
+  PRDG_V (rdgp) = XNEW (std::vector<prdg_vertex_p>);
+  PRDG_E (rdgp) = XNEW (std::vector<prdg_edge_p>);
 
   return rdgp;
 }
@@ -659,12 +662,15 @@ void scc::create_vertices (rdg_p rdg)
         {
           	  Instruction *instrs = bsi;
               rdg_vertex_p v = RDG_VERTEX (rdg, vertex_index);
-              RDGV_INSTRS (v) = bsi;
               RDGV_INSTRS (v) = instrs;
               RDGV_N (v) = vertex_index;
               RDGV_BB (v) = i;
               RDGV_COLOR (v) = 0;
               RDGV_DD_P (v) = contains_dr_p (bsi, RDG_DDR (rdg));
+              RDGV_IN (v) = XNEW(std::vector<rdg_edge_p>); 
+              RDGV_OUT (v) = XNEW(std::vector<rdg_edge_p>); 
+              RDGV_PARTITIONS (v) = XNEW(std::vector<int>);
+              RDGV_SCCS (v) = XNEW(std::vector<int>);
               vertex_index++;
 
         }
@@ -756,7 +762,10 @@ void scc::update_edge_with_ddv (ddr_p ddr0, rdg_p rdg, unsigned int index_of_edg
   
 //  VEC_safe_push (rdg_edge_p, heap, RDGV_OUT (va), edge);
 //  VEC_safe_push (rdg_edge_p, heap, RDGV_IN (vb), edge);
+  errs() << "debug\n";
+  errs() << RDGV_OUT(va)->size() << "\t";
   (RDGV_OUT(va))->push_back(edge);
+  errs() << "debug\n";
   (RDGV_IN(vb))->push_back(edge);
 }
 
