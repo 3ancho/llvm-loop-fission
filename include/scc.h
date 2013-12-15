@@ -160,6 +160,7 @@ struct data_dependence_relation
   Instruction *b;
 };
 
+
 struct rdg_edge 
 {
   /* Color used for graph algorithms.  */  
@@ -246,7 +247,9 @@ struct prdg_edge
 //    LoopInfo *LI;
 
 /////////////////////functions to generate scc///////////////////
-std::vector<ddr> compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap);
+
+//std::vector<ddr_p> compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap);
+void compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap, std::vector<ddr_p> *ddr_0);
 
 void dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned int scc);
 
@@ -301,14 +304,12 @@ int number_of_edges (rdg_p rdg, DG *depmap);
 void create_vertices (rdg_p rdg);
 
 void create_edges (rdg_p rdg);
-  
-//void update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg, unsigned int index_of_edge);
 
 rdg_p build_rdg (Loop *loop_nest);
 
 std::vector<prdg_vertex_p> topological_sort (prdg_p g);
 
-void do_distribution (Loop *loop_nest, DG *depmap);
+void do_distribution (Loop *loop_nest);
 
 void open_loop_dump (Loop *loop_nest);
 
@@ -320,8 +321,7 @@ void dump_rdg (FILE *outf, rdg_p rdg);
 
 void out_scc(std::vector <prdg_vertex_p> scc, Loop *loop_nest);
 
-
-void update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
+void update_edge_with_ddv (ddr_p ddr0, rdg_p rdg,
                       unsigned int index_of_edge);
 //////////////////END functions to generate scc//////////////////
 
