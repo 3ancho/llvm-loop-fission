@@ -80,10 +80,11 @@ void scc::getAnalysisUsage(AnalysisUsage &AU) const {
 	  AU.addRequired<DG>();
     }
 ////////////END public implementation//////////////////
+
 //////////private implementation/////////////////////
-std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap)
+std::vector<ddr_p> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap)
 {
-  std::vector<ddr> ddr_0; 
+  std::vector<ddr_p> ddr_0; 
   std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[loop_nest];
 //  for (mapit1 = dgOfLoops.begin(); mapit1 != dgOfLoops.end(); ++mapit1) {
 //    int count = 0;
@@ -94,9 +95,10 @@ std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *de
       std::set<Instruction*> set_temp = mapit2->second;
       std::set<Instruction*>::iterator setit;
       for (setit = set_temp.begin(); setit != set_temp.end(); ++setit) {
-        ddr s;
-        s.a = inst;
-        s.b = *setit;
+        ddr s_ins;
+        ddr_p s = &s_ins;
+        s->a = inst;
+        s->b = *setit;
         ddr_0.push_back(s); 
       }
     }
@@ -667,12 +669,9 @@ void scc::create_vertices (rdg_p rdg)
 
 void scc::create_edges (rdg_p rdg)
 {
-  unsigned int i;
-  unsigned int j;
   unsigned int edge_index;
   unsigned int edges;
-  ddr_p ddrp;
-
+  std::vector<ddr_p> dep_r = rdg->dependence_relations;
 
   /* Allocate an array for scalar edges and data edges.  */
 
@@ -689,19 +688,18 @@ void scc::create_edges (rdg_p rdg)
   /* Create data edges.  */
   edge_index = 0;
  
-  for (int iter = 0; iter < ddrp->size(); ++iter){
-   update_edge_with_ddv(ddrp, ddrp[iter], rdg, edge_index++); 
+  for (unsigned int iter = 0; iter < dep_r.size(); ++iter){
+   update_edge_with_ddv(dep_r[iter], rdg, edge_index++); 
   }
 
 }
 
 /* Creates an edge with a data dependence vector.  */
 
-void scc::update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
-                      unsigned int index_of_edge)
+void scc::update_edge_with_ddv (ddr_p ddr0, rdg_p rdg, unsigned int index_of_edge)
 {
-  Instruction *a;
-  Instruction *b;
+  Instruction *a = ddr0->a;
+  Instruction *b = ddr0->b;
   rdg_edge_p edge = RDG_EDGE (rdg, index_of_edge);
   rdg_vertex_p va;
   rdg_vertex_p vb;
@@ -721,7 +719,7 @@ void scc::update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
       drb = DDR_B (ddr);
     }
 */
-
+  
   /* Locate the vertices containing the statements that contain
      the data references.  */
   va = find_vertex_with_instrs (rdg, a);
@@ -761,14 +759,12 @@ void scc::update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
 rdg_p scc::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
-  std::vector<ddr> *dependence_relations;
+//  std::vector<ddr> *dependence_relations;
   std::vector<rdg_vertex_p> dd_vertices;
   unsigned int i;
   rdg_vertex_p vertex;
   
   /* Compute array data dependence relations */
-
-
 
   /* OK, now we know that we can build our Reduced Dependence Graph
      where each vertex is a statement and where each edge is a data
@@ -776,8 +772,7 @@ rdg_p scc::build_rdg (Loop *loop_nest)
   rdg = XNEW (struct rdg);
   RDG_LOOP (rdg) = loop_nest;
 
-
-  RDG_DDR (rdg) = compute_data_dependences_for_loop (loop_nest) 
+  RDG_DDR (rdg) = compute_data_dependences_for_loop (loop_nest, depmap); 
   
   create_vertices (rdg);
   create_edges (rdg);
@@ -844,7 +839,7 @@ void scc::do_distribution (Loop *loop_nest)
       for (std::vector<prdg_vertex_p>::iterator it=(dloops).begin();it!=(dloops).end();++it )
       {
        v = *it; 
-       fprintf (dump_file, "  <dloop n=\"%d\">P%d</dloop>\n",i, PRDGV_N (v));
+       fprintf (dump_file, "  <dloop>P%d</dloop>\n", PRDGV_N (v));
       }
       
       fprintf (dump_file, "</topological_sort>\n");
