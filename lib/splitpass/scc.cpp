@@ -613,11 +613,12 @@ rdg_vertex_p scc::find_vertex_with_instrs (rdg_p rdg, Instruction* instrs)
   return vertex;
 }
 
-bool scc::contains_dr_p ( Instruction *instrs, std::vector<ddr_p> pddr)
+//bool scc::contains_dr_p ( Instruction *instrs, std::vector<ddr_p> pddr)
+bool scc::contains_dr_p ( Instruction *instrs, std::vector<ddr_p> *pddr)
 {
   ddr_p dd;
   
-    for(std::vector<ddr_p>::iterator it=(pddr).begin();it!=(pddr).end();++it)
+    for(std::vector<ddr_p>::iterator it=pddr->begin();it!=pddr->end();++it)
     {
 	dd=*it;
     if ((dd->a) == instrs)
@@ -672,8 +673,8 @@ void scc::create_edges (rdg_p rdg)
 {
   unsigned int edge_index;
   unsigned int edges;
-  std::vector<ddr_p> dep_r = rdg->dependence_relations;
-
+  std::vector<ddr_p> *dep_r = rdg->dependence_relations;
+//
   /* Allocate an array for scalar edges and data edges.  */
 
   edges = number_of_edges (rdg,depmap);
@@ -689,8 +690,8 @@ void scc::create_edges (rdg_p rdg)
   /* Create data edges.  */
   edge_index = 0;
  
-  for (unsigned int iter = 0; iter < dep_r.size(); ++iter){
-   update_edge_with_ddv(dep_r[iter], rdg, edge_index++); 
+  for (unsigned int iter = 0; iter < dep_r->size(); ++iter){
+   update_edge_with_ddv((*dep_r)[iter], rdg, edge_index++); 
   }
 
 }
@@ -787,17 +788,7 @@ rdg_p scc::build_rdg (Loop *loop_nest)
     }
   }
 
-  errs() << "1\n" ;
-  errs() << RDG_DDR(rdg).size();
-  errs() << dep_r->size();
-  errs() << (*dep_r)[0];
-  errs() << "1\n" ;
-  
-  for (i = 0; i < dep_r->size(); i++){
-    RDG_DDR(rdg).push_back((*dep_r)[i]);
-  }
-//  RDG_DDR (rdg) = *dep_r;
-//  compute_data_dependences_for_loop (loop_nest, depmap, dep_r); 
+  RDG_DDR(rdg) = dep_r;
   
   create_vertices (rdg);
   create_edges (rdg);

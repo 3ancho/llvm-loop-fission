@@ -112,10 +112,10 @@ struct rdg
   rdg_edge_p edges;
   
   /* Vertices that contain a statement containing an ARRAY_REF.  */
-  std::vector<rdg_vertex_p> dd_vertices;
+  std::vector<rdg_vertex_p> *dd_vertices;
   
   /* Data references and array data dependence relations.  */
-  std::vector<ddr_p> dependence_relations;
+  std::vector<ddr_p> *dependence_relations;
 
 };
 
@@ -295,7 +295,7 @@ prdg_p build_prdg (rdg_p rdg);
 
 rdg_vertex_p find_vertex_with_instrs (rdg_p rdg, Instruction * instrs);
 
-bool contains_dr_p ( Instruction *instrs, std::vector<ddr_p> pddr);
+bool contains_dr_p ( Instruction *instrs, std::vector<ddr_p> *pddr);
 
 int number_of_vertices (rdg_p rdg, DG *depmap);
 
