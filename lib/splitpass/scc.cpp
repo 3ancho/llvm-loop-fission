@@ -643,7 +643,7 @@ void scc::create_vertices (rdg_p rdg)
   RDG_NBV (rdg) = number_of_vertices (rdg,depmap);
   
   vertex_index = 0;
-  llvm::BasicBlock *  bb = loop_nest->getBlocks();
+  llvm::BasicBlock * bb = loop_nest->getBlocks();
 //////////////////NOTICE/////////getBody!  
 //  for (i = 0; i < (loop_nest->getNumBlocks()); i++)
 //    {
