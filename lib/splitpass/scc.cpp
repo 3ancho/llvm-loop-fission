@@ -604,13 +604,13 @@ rdg_vertex_p scc::find_vertex_with_instrs (rdg_p rdg, Instruction* instrs)
   unsigned int i;
   
   for (i = 0; i < RDG_NBV (rdg) && vertex == NULL; i++)
-    if (RDGV_INSTRS(RDG_VERTEX (rdg,i)) == *instrs)
+    if ((RDGV_INSTRS(RDG_VERTEX (rdg,i))) == instrs)
       vertex = RDG_VERTEX (rdg, i);
   
   return vertex;
 }
 
-bool scc::contains_dr_p ( Instruction instrs, std::vector<ddr_p> pddr)
+bool scc::contains_dr_p ( Instruction *instrs, std::vector<ddr_p> pddr)
 {
   ddr_p dd;
   

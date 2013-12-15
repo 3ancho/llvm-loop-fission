@@ -292,7 +292,7 @@ prdg_p build_prdg (rdg_p rdg);
 
 rdg_vertex_p find_vertex_with_instrs (rdg_p rdg, Instruction * instrs);
 
-bool contains_dr_p ( Instruction instrs, std::vector<ddr_p> pddr);
+bool contains_dr_p ( Instruction *instrs, std::vector<ddr_p> pddr);
 
 int number_of_vertices (rdg_p rdg, DG *depmap);
 
@@ -302,7 +302,7 @@ void create_vertices (rdg_p rdg);
 
 void create_edges (rdg_p rdg);
   
-void update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg, unsigned int index_of_edge);
+//void update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg, unsigned int index_of_edge);
 
 rdg_p build_rdg (Loop *loop_nest);
 
