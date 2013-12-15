@@ -24,7 +24,9 @@ void BP::OutputBP(Loop *L) {
           errs() << "Hello: Dependence graph is empty\n";
         } else {
 	////////////NOTICE//////////
-          Partitions[L] = build_partition(L, dg_instr_map); 
+          inst_map_set inst_map = dual_dg_map(dg_instr_map);
+          Partitions[L] = build_partition(L, inst_map); 
+          dumpBP(L);
 //          Partitions.insert(std::pair<Loop*, inst_vec_vec> (L, build_partition(L, dg_instr_map))); 
         }
       }
@@ -53,6 +55,23 @@ void BP::getAnalysisUsage(AnalysisUsage &AU) const {
       AU.addRequired<DG>();
     }
 
+inst_map_set BP::dual_dg_map(inst_map_set dg_inst_map){
+  inst_map_set dual_map = dg_inst_map;
+  inst_set instset;
+  inst_map_set::iterator it;
+  inst_set::iterator idx;
+  
+  for (it = dg_inst_map.begin(); it != dg_inst_map.end(); it++){
+    instset = it->second;
+    for (idx = instset.begin(); idx != instset.end(); idx++){
+      Instruction *inst = *idx;
+      dg_inst_map[inst].insert (it->first);
+    }
+  }
+  
+  return dg_inst_map;
+  
+}
 inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
 //  int NumOfNode = depmap->numOfNodes[CurL];
 //  std::vector<inst_visit> visit_flag;
@@ -84,8 +103,11 @@ inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_
   inst_set dep_insts = dg_of_loop[start_inst];  //all insts that start_inst related to
   inst_set::iterator it;
   group.push_back(start_inst);
+  errs() << "start_inst: " << *start_inst << "\n";
   for (it = dep_insts.begin(); it != dep_insts.end(); it++){
     Instruction *inst = *it;
+    errs() << "visited_inst: " << *inst << "\t";
+    errs() << !(*visited)[inst] << "\n";
     if (!(*visited)[inst]) { // not visited
       (*visited)[inst] = true;
       inst_vec new_insts = dfs(inst, dg_of_loop, all_insts, visited);

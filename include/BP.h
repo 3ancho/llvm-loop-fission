@@ -40,6 +40,7 @@ typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
 //////functions/////
     inst_vec dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited);
     inst_vec_vec build_partition(Loop *CurL, inst_map_set CurInstMapSet);
+    inst_map_set dual_dg_map(inst_map_set dg_inst_map);
 
     std::map<Loop*, int> NumOfPartitions;
     loop_sccs	Partitions; 
