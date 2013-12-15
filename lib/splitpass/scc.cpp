@@ -122,14 +122,14 @@ void scc::dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned i
   /* If scc!=0, add this SCC to each vertex of the partition. */
   if (scc)
     {
-	for(std::vector<rdg_vertex_p>::iterator it=(PRDGV_PV (v)).begin();it!=(PRDGV_PV (v)).end();++it)	
+	for(std::vector<rdg_vertex_p>::iterator it=(PRDGV_PV (v))->begin();it!=(PRDGV_PV (v))->end();++it)	
 	{
 		rdg_v=*it;
-		(RDGV_SCCS(rdg_v)).push_back(scc);
+		(RDGV_SCCS(rdg_v))->push_back(scc);
 	}
     }
 
-  for(std::vector<prdg_edge_p>::iterator it=(PRDG_E (g)).begin();it!=(PRDG_E (g)).end();++it)
+  for(std::vector<prdg_edge_p>::iterator it=(PRDG_E (g))->begin();it!=(PRDG_E (g))->end();++it)
   {
 	if (PRDGE_SOURCE (*it) == v)
       {
@@ -156,14 +156,14 @@ int scc::dfs_rdgp (prdg_p g)
   unsigned int t = 0;
   prdg_vertex_p v;
 
-  for(std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g)).begin();it!=(PRDG_V (g)).end();++it)
+  for(std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g))->begin();it!=(PRDG_V (g))->end();++it)
     {
     	v= *it;
       PRDGV_COLOR (v) = VERTEX_WHITE;
       PRDGV_PRED (v) = NULL;
     }
 
-  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g)).begin(); it!=(PRDG_V (g)).end() ;++it)
+  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g))->begin(); it!=(PRDG_V (g))->end() ;++it)
     if (PRDGV_COLOR (v) == VERTEX_WHITE)
       dfs_rdgp_visit (g, v, &t, 0);
   
@@ -185,7 +185,7 @@ unsigned int scc::scc_rdgp_1 (prdg_p g, int max_f)
   prdg_vertex_p v;
   std::vector<prdg_vertex_p> *psorted_vertices;
 
-  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g)).begin();it!=(PRDG_V (g)).end(); ++it)
+  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g))->begin();it!=(PRDG_V (g))->end(); ++it)
     {
 	v = *it;
       PRDGV_COLOR (v) = VERTEX_WHITE;
@@ -200,7 +200,7 @@ unsigned int scc::scc_rdgp_1 (prdg_p g, int max_f)
      This array has a size equal to 'max_f' with holes.  */
   
      psorted_vertices=new std::vector<prdg_vertex_p>[max_f];
-    for(std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g)).begin();it!=(PRDG_V (g)).end();++it)
+    for(std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g))->begin();it!=(PRDG_V (g))->end();++it)
     {
 	v=*it;
       unsigned int idx = lower_bound (*psorted_vertices,v);
@@ -229,7 +229,7 @@ void scc::transpose_rdgp (prdg_p g)
 //  unsigned int i;
   prdg_edge_p e;
   
-  for (std::vector<prdg_edge_p>::iterator it=(PRDG_E (g)).begin();it!=(PRDG_E (g)).end(); ++it)
+  for (std::vector<prdg_edge_p>::iterator it=(PRDG_E (g))->begin();it!=(PRDG_E (g))->end(); ++it)
     {
 	e=*it;
       prdg_vertex_p tmp = PRDGE_SINK (e);
@@ -265,7 +265,7 @@ bool scc::vertex_in_partition_p (rdg_vertex_p v, int p)
 //  int i;
   int vp;
   
-  for (std::vector<int>::iterator it=(RDGV_PARTITIONS (v)).begin();it!=(RDGV_PARTITIONS (v)).end(); ++it)
+  for (std::vector<int>::iterator it=(RDGV_PARTITIONS (v))->begin();it!=(RDGV_PARTITIONS (v))->end(); ++it)
   { 	vp=*it;
 	if (vp == p)
       	return true;
@@ -278,7 +278,7 @@ bool scc::vertex_in_scc_p (rdg_vertex_p v, int s)
 //  int i;
   int vs;
   
-  for (std::vector<int>::iterator it = (RDGV_SCCS (v)).begin(); it!=(RDGV_SCCS (v)).end(); ++it)
+  for (std::vector<int>::iterator it = (RDGV_SCCS (v))->begin(); it!=(RDGV_SCCS (v))->end(); ++it)
   {	vs=*it;
 	if (vs == s)
       	return true;
@@ -304,7 +304,7 @@ prdg_vertex_p scc::new_prdg_vertex (unsigned int p)
 
 void scc::free_prdg_vertex (prdg_vertex_p v)
 {
-    PRDGV_PV (v).~vector();
+    PRDGV_PV (v)->~vector();
     delete[] v;
 }
 
@@ -342,17 +342,17 @@ void scc::free_prdg (prdg_p g)
   prdg_vertex_p v;
   prdg_edge_p e;
   
-  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g)).begin();it!=(PRDG_V (g)).end(); ++it)
+  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (g))->begin();it!=(PRDG_V (g))->end(); ++it)
  {
     v=*it;
     free_prdg_vertex (v);
  } 
-  for (std::vector<prdg_edge_p>::iterator it=(PRDG_E (g)).begin(); it!=(PRDG_E (g)).end(); ++it)
+  for (std::vector<prdg_edge_p>::iterator it=(PRDG_E (g))->begin(); it!=(PRDG_E (g))->end(); ++it)
  {  e=*it; 
     free_prdg_edge (e);
  }
-	(PRDG_V (g)).~vector();
-	(PRDG_E (g)).~vector();
+	(PRDG_V (g))->~vector();
+	(PRDG_E (g))->~vector();
    delete g;
 }
 
@@ -381,11 +381,11 @@ prdg_p scc::build_scc_graph (prdg_p g)
 	  rdg_vertex_p rdg_v = RDG_VERTEX (PRDG_RDG (sccg), j);
         
 	  if (vertex_in_scc_p (rdg_v, current_scc))
-		(PRDGV_PV (v)).push_back(rdg_v);
+		(PRDGV_PV (v))->push_back(rdg_v);
 	}
       
       PRDGV_SCC (v) = current_scc;
-	(PRDG_V (sccg)).push_back(v);
+	(PRDG_V (sccg))->push_back(v);
     }
   
   /* Create SCC edges.  */
@@ -397,12 +397,12 @@ prdg_p scc::build_scc_graph (prdg_p g)
       if (!RDGE_SCALAR_P (e))
 	{
 	  prdg_edge_p pe;
-	  int source_idx = (RDGV_SCCS (RDGE_SOURCE (e))).at(0);
-          int sink_idx = (RDGV_SCCS (RDGE_SINK (e))).at(0);
+	  int source_idx = (RDGV_SCCS (RDGE_SOURCE (e)))->at(0);
+          int sink_idx = (RDGV_SCCS (RDGE_SINK (e)))->at(0);
           
-	pe = new_prdg_edge (e,((sccg->vertices).at(source_idx - 1)),((sccg->vertices).at(sink_idx - 1)));
+	pe = new_prdg_edge (e,((sccg->vertices)->at(source_idx - 1)),((sccg->vertices)->at(sink_idx - 1)));
  
-	(sccg->edges).push_back(pe);
+	(sccg->edges)->push_back(pe);
 	}	
     }
     
@@ -417,7 +417,7 @@ bool scc::can_recompute_vertex_p (rdg_vertex_p v)
   if (RDGV_DD_P (v))
     return false;
   
-    for(std::vector<rdg_edge_p>::iterator it=(RDGV_IN (v)).begin();it!=(RDGV_IN (v)).end();++it)
+    for(std::vector<rdg_edge_p>::iterator it=(RDGV_IN (v))->begin();it!=(RDGV_IN (v))->end();++it)
     {
 	in_edge = *it; 
     if (RDGE_SCALAR_P (in_edge))
@@ -436,18 +436,18 @@ void scc::one_prdg (rdg_p rdg, rdg_vertex_p v, int p)
   if (vertex_in_partition_p (v, p))
     return;
 
-  (RDGV_PARTITIONS (v)).push_back(p);
+  (RDGV_PARTITIONS (v))->push_back(p);
 
-  for(std::vector<rdg_edge_p>::iterator it=(RDGV_IN (v)).begin();it!=(RDGV_IN (v)).end();++it)  {
-    i_edge = *it;
- errs() << "debug\n";
-    if (RDGE_SCALAR_P (i_edge))
+    for(std::vector<rdg_edge_p>::iterator it=(RDGV_IN (v))->begin();it!=(RDGV_IN (v))->end();++it)
+    {
+      i_edge = *it;
+      if (RDGE_SCALAR_P (i_edge))
       one_prdg (rdg, RDGE_SOURCE (i_edge), p);
   }
 
   if (!can_recompute_vertex_p (v))
-    for(std::vector<rdg_edge_p>::iterator it=(RDGV_OUT (v)).begin();it!=(RDGV_OUT (v)).end();++it) {
- errs() << "debug\n";
+      for(std::vector<rdg_edge_p>::iterator it=(RDGV_OUT (v))->begin();it!=(RDGV_OUT (v))->end();++it)
+      {
       if (RDGE_SCALAR_P (o_edge))
         one_prdg (rdg, RDGE_SINK (o_edge), p);
     }
@@ -464,10 +464,10 @@ bool scc::correct_partitions_p (rdg_p rdg, int p)
   for (i = 0; i < RDG_NBV (rdg); i++)
     {
         if(RDGV_DD_P (RDG_VERTEX (rdg, i))
-	  &&!((RDGV_PARTITIONS(RDG_VERTEX (rdg, i)).size()==1)))
+	  &&!(((RDGV_PARTITIONS(RDG_VERTEX (rdg, i)))->size()==1)))
 	return false;
     
-      if (!(RDGV_PARTITIONS (RDG_VERTEX (rdg, i)).size()))
+      if (!((RDGV_PARTITIONS (RDG_VERTEX (rdg, i)))->size()))
         return false;
     }
 
@@ -501,7 +501,7 @@ scc::topological_sort (prdg_p g)
 //    vertices[PRDGV_F (v)] = v;
 //  for (i = 0; VEC_iterate (prdg_vertex_p, PRDG_V (g), i, v); i++)
   for (i = 0; i < max_f; i++){
-    v = (PRDG_V (g))[i];
+    v = (*(PRDG_V (g)))[i];
     vertices[PRDGV_F (v)] = v;
   }
 
@@ -524,14 +524,14 @@ unsigned int scc::mark_partitions (rdg_p rdg)
 
   /* Clear all existing partitions.  */
   for (i = 0; i < RDG_NBV (rdg); i++)
-    RDGV_PARTITIONS (RDG_VERTEX (rdg,i)).resize(0);
+    (RDGV_PARTITIONS (RDG_VERTEX (rdg,i)))->resize(0);
   
   /* If there are no dd_vertices, put all in one single partition.  */
   if ((RDG_DDV (rdg))->size() == 0)
     {
      /* Mark all vertices with p=1.  */
       for (i = 0; i < RDG_NBV (rdg); i++)
-	(RDGV_PARTITIONS (RDG_VERTEX (rdg, i))).push_back(1);	
+	((RDGV_PARTITIONS (RDG_VERTEX (rdg, i))))->push_back(1);	
 	
       return 1;
     }
@@ -540,16 +540,16 @@ unsigned int scc::mark_partitions (rdg_p rdg)
   for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg))->begin();it!=(RDG_DDV (rdg))->end();++it)
     {
 	rdg_v = *it;
-     if ( (RDGV_PARTITIONS (rdg_v)).size() == 0)
+     if ( (RDGV_PARTITIONS (rdg_v))->size() == 0)
       one_prdg (rdg, rdg_v, ++p);
     }
   /* Add the vertices that are not in a partition in all partitions.
      Those vertices does not contain any ARRAY_REF (otherwise, they would
      have been added by the previous loop on dd_vertices).  */
   for (i = 0; i < RDG_NBV (rdg); i++)
-    if ((RDGV_PARTITIONS (RDG_VERTEX (rdg, i))).size() == 0)
+    if ((RDGV_PARTITIONS (RDG_VERTEX (rdg, i)))->size() == 0)
       for (k = 1; k <= p; k++)
-	(RDGV_PARTITIONS (RDG_VERTEX (rdg, i))).push_back(k);
+	(RDGV_PARTITIONS (RDG_VERTEX (rdg, i)))->push_back(k);
     
 	if(correct_partitions_p (rdg, p)) errs()<<"wrong partition\n";
   
@@ -574,10 +574,10 @@ prdg_p scc::build_prdg (rdg_p rdg)
 	  rdg_v = RDG_VERTEX (rdg, j);
         
 	  if (vertex_in_partition_p (rdg_v, current_partition))
-	  (PRDGV_PV (v)).push_back(rdg_v);
+	  (PRDGV_PV (v))->push_back(rdg_v);
 	}
 
-      (PRDG_V (rdgp)).push_back(v);
+      (PRDG_V (rdgp))->push_back(v);
 
     }
 
@@ -589,12 +589,12 @@ prdg_p scc::build_prdg (rdg_p rdg)
       /* Here we take only into account data dependences.  */
       if (!RDGE_SCALAR_P (e))
 	{
-	  int so_idx = (RDGV_PARTITIONS (RDGE_SOURCE (e))).at(0);
-          int si_idx = (RDGV_PARTITIONS (RDGE_SINK (e))).at(0);
-	  prdg_edge_p pe = new_prdg_edge (e,  (rdgp->vertices[so_idx-1]),
-					  (rdgp->vertices[si_idx-1]));
+	  int so_idx = (RDGV_PARTITIONS (RDGE_SOURCE (e)))->at(0);
+          int si_idx = (RDGV_PARTITIONS (RDGE_SINK (e)))->at(0);
+//	  prdg_edge_p pe = new_prdg_edge (e,  (*((rdgp->vertices)+(so_idx-1))),(*(rdgp->vertices)+(si_idx-1)));
+	  prdg_edge_p pe = new_prdg_edge (e,  (PRDG_V(rdgp)->at(so_idx-1)),(PRDG_V(rdgp)->at(si_idx-1)));
 
-	  (PRDG_E (rdgp)).push_back(pe);
+	  (PRDG_E (rdgp))->push_back(pe);
 
 	}
     }
@@ -756,8 +756,8 @@ void scc::update_edge_with_ddv (ddr_p ddr0, rdg_p rdg, unsigned int index_of_edg
   
 //  VEC_safe_push (rdg_edge_p, heap, RDGV_OUT (va), edge);
 //  VEC_safe_push (rdg_edge_p, heap, RDGV_IN (vb), edge);
-  RDGV_OUT(va).push_back(edge);
-  RDGV_IN(vb).push_back(edge);
+  (RDGV_OUT(va))->push_back(edge);
+  (RDGV_IN(vb))->push_back(edge);
 }
 
 rdg_p scc::build_rdg (Loop *loop_nest)
@@ -801,7 +801,11 @@ rdg_p scc::build_rdg (Loop *loop_nest)
 
       if (RDGV_DD_P (vertex))
 //	VEC_safe_push (rdg_vertex_p, heap, RDG_DDV (rdg), vertex);
+
+        (RDG_DDV (rdg))->push_back(vertex);
+
         dd_vertices->push_back(vertex);
+
     }
 
    RDG_DDV(rdg) = dd_vertices;
@@ -881,13 +885,13 @@ void scc::dump_prdg (FILE *outf, prdg_p rdgp)
     
   /* Print out vertices. Each vertex represents a partition, then it
     can contain several statements.  */
-  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (rdgp)).begin();it!=(PRDG_V (rdgp)).end();++it)
+  for (std::vector<prdg_vertex_p>::iterator it=(PRDG_V (rdgp))->begin();it!=(PRDG_V (rdgp))->end();++it)
     {
 	pv = *it;
       fprintf (outf, " P%d [ shape=rect,label = \" P%d(%d): ", 
 	       PRDGV_N (pv), PRDGV_N (pv), PRDGV_SCC (pv));
     
-      for (std::vector<rdg_vertex_p>::iterator it=(PRDGV_PV (pv)).begin();it!=(PRDGV_PV (pv)).end();++it )
+      for (std::vector<rdg_vertex_p>::iterator it=(PRDGV_PV (pv))->begin();it!=(PRDGV_PV (pv))->end();++it )
       {
 	v = *it;
 	fprintf (outf, "S%d;", RDGV_N (v));
@@ -902,7 +906,7 @@ void scc::dump_prdg (FILE *outf, prdg_p rdgp)
       fprintf (outf, "{rank=same; P%d; v%d; }\n",  PRDGV_N (pv), PRDGV_N (pv)); 
     } 
   
-  for (std::vector<prdg_edge_p>::iterator it=(PRDG_E (rdgp)).begin();it!=(PRDG_E (rdgp)).end();++it)
+  for (std::vector<prdg_edge_p>::iterator it=(PRDG_E (rdgp))->begin();it!=(PRDG_E (rdgp))->end();++it)
   {
 	pe = *it;
     fprintf (outf, "v%d -> v%d [style=dotted];\n",
@@ -974,13 +978,14 @@ void scc::out_scc(std::vector<prdg_vertex_p> scc, Loop *loop_nest)
 {
   std::vector<std::vector<Instruction*> > sccs;
   std::vector<Instruction*> single_scc;
-  std::vector<rdg_vertex_p> pvertices;
+  std::vector<rdg_vertex_p> *pvertices;
   unsigned int i, j;
 
   for (i = 0; i < scc.size(); i++){
     pvertices = scc[i]->pvertices;
-    for (j = 0; j < pvertices.size(); j++)
-      single_scc.push_back(pvertices[j]->instrs);
+
+    for (j = 0; j < (pvertices->size()); j++)
+      single_scc.push_back((*pvertices)[j]->instrs);
     sccs.push_back(single_scc);
   }
   outscc[loop_nest] = sccs;

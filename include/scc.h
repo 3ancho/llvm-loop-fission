@@ -137,21 +137,19 @@ struct rdg_vertex
   bool has_dd_p; 
   
   /* Vertex is the sink of those edges.  */
-//  VEC (rdg_edge_p, heap) *in_edges;
-  std::vector<rdg_edge_p> in_edges;
+  std::vector<rdg_edge_p> *in_edges;
   
   /* Vertex is the source of those edges. */
-//  VEC (rdg_edge_p, heap) *out_edges;
-  std::vector<rdg_edge_p> out_edges;
+  std::vector<rdg_edge_p> *out_edges;
 
   /* Partitions the vertex is in.  
      If 'has_dd_p' is true, the vertex can only be in one partition.
      If not, the vertex can be duplicated in several partitions.  */
-  std::vector<int> partition_numbers;
+  std::vector<int> *partition_numbers;
   /* Strongly connected components the vertex is in.
      If 'has_dd_p' is true, the vertex can only be in one SCC.
      If not, the vertex can be in several SCCs.  */
-  std::vector<int> scc_numbers;
+  std::vector<int> *scc_numbers;
 };
 
 struct data_dependence_relation
@@ -188,10 +186,10 @@ struct prdg
   rdg_p rdg;
   
   /* The vertices of the graph.  */
-  std::vector<prdg_vertex_p> vertices;
+  std::vector<prdg_vertex_p> *vertices;
   
   /* The edges of the graph.  */
-  std::vector<prdg_edge_p> edges;
+  std::vector<prdg_edge_p> *edges;
 };
 
 struct prdg_vertex 
@@ -216,7 +214,7 @@ struct prdg_vertex
    
   /* Vertices of the RDG that are in this partition.  */
 //  VEC (rdg_vertex_p, heap) *pvertices;
-  std::vector<rdg_vertex_p> pvertices;
+  std::vector<rdg_vertex_p> *pvertices;
 };
 
 struct prdg_edge 
