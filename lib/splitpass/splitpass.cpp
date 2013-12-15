@@ -26,7 +26,7 @@ namespace {
         private:
             ProfileInfo* PI;
             LoopInfo *LI;
-            ValueToValueMapTy VMap;  // store old bb -> new bb  
+            
 
         public:
             static char ID;
@@ -35,6 +35,10 @@ namespace {
             bool runOnFunction(Function &F);
             void getAnalysisUsage(AnalysisUsage &) const;
             void remapInstruction(Instruction *I,  ValueToValueMapTy &VMap);
+            BasicBlock * InsertPreheaderForLoop(Loop *L, Pass *PP);
+            void PlaceSplitBlockCarefully(BasicBlock *NewBB,
+                    SmallVectorImpl<BasicBlock*> &SplitPreds,
+                    Loop *L);
             
             // clone the given loop, L 
             Loop *CreateOneLoop(Loop *L);
@@ -54,9 +58,11 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
     // TODO check if only one exit block.
     // TODO check if save to clone.
 
-    std::vector< BasicBlock * > body = L->getBlocks();
     BasicBlock *Header = L->getHeader();
-    BasicBlock *PreHeader = L->getLoopPreheader(); 
+    std::vector< BasicBlock * > body = L->getBlocks();
+    DEBUG(dbgs() << "Test \n");
+    BasicBlock *PreHeader = L->getLoopPredecessor(); 
+
     BasicBlock *Exit = L->getExitBlock(); 
     ValueToValueMapTy LastValueMap;
     std::vector<BasicBlock *> new_body;
@@ -74,7 +80,7 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
         }
     }
     // new_body[0] is Header new_body(new_body.size()-1) is Latch
-
+    
     // change vars
     for(unsigned i=0; i<new_body.size(); ++i) {
         for (BasicBlock::iterator I = new_body[i]->begin(); I != new_body[i]->end(); ++I) {
@@ -84,26 +90,19 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
     DEBUG(dbgs() << "Cloned loop's register name changed ok\n");
 
     // fix the phi node in cloned Loops Header  
-    for(unsigned i=0; i<new_body.size(); i++) {
-        for (BasicBlock::iterator I = new_body[i]->begin(); isa<PHINode>(I); ++I) {
-            PHINode *NewPHI = cast<PHINode>(I); 
-            DEBUG(dbgs() << "About to fix phi node: "<<  NewPHI << "\n");
+    for (BasicBlock::iterator I = new_body[0]->begin(); isa<PHINode>(I); ++I) {
+        PHINode *NewPHI = cast<PHINode>(I); 
 
-            for (unsigned i=0; i<NewPHI->getNumIncomingValues(); ++i) {
-                if (NewPHI->getIncomingBlock(i) == PreHeader) {
-                    NewPHI->setIncomingBlock(i, Header);
-                }
+        for (unsigned i=0; i<NewPHI->getNumIncomingValues(); ++i) {
+            if (NewPHI->getIncomingBlock(i) == PreHeader) {
+                NewPHI->setIncomingBlock(i, Header);
             }
-            DEBUG(dbgs() << "Done phi node: "<<  NewPHI << "\n");
         }
     }
-    DEBUG(dbgs() << "Cloned Loop body Phi Node done \n");
     DEBUG(dbgs() << "Start working on exit block \n");
-
     // fix the phi node in original Loop's exit BB. Because the cloned loop points to it.
     for (BasicBlock::iterator I = Exit->begin(); isa<PHINode>(I); ++I) {
         PHINode *NewPHI = cast<PHINode>(I);
-        DEBUG(dbgs() << "Exit block, About to fix phi node: "<<  NewPHI << "\n");
 
         for (unsigned i=0; i<NewPHI->getNumIncomingValues(); ++i) {
             if (NewPHI->getIncomingBlock(i) == Header) {
@@ -113,8 +112,9 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
         DEBUG(dbgs() << "Exit block, Done phi node: "<<  NewPHI << "\n");
     }
 
-
     DEBUG(dbgs() << "All Phi Node done \n");
+
+
 
     BranchInst *new_back_edge = cast<BranchInst>(new_body[new_body.size()-1]->getTerminator());   // Latch's last inst is branch
     new_back_edge->setSuccessor(0, new_body[0]); // Set to branch to new Cond (Header) 1st BB
@@ -127,8 +127,11 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
 
     // first cond exit points to second cond block
     BranchInst *first_loop_to_next_loop = cast<BranchInst>(Header->getTerminator());
-    DEBUG(dbgs() << "branch successors " << first_loop_to_next_loop->getNumSuccessors() << "\n");
-    first_loop_to_next_loop->setSuccessor(1, new_body[0]);
+    for(unsigned i=0; i< first_loop_to_next_loop->getNumSuccessors(); ++i) { 
+        if (first_loop_to_next_loop->getSuccessor(i) == Exit) {
+            first_loop_to_next_loop->setSuccessor(i, new_body[0]);
+        }
+    }
 
     Loop *new_loop = new Loop();
 
@@ -137,10 +140,6 @@ Loop * SplitPass::CreateOneLoop(Loop *L) {
     }
     new_loop->moveToHeader(new_body[0]); // set Header for new loop 
     
-    BasicBlock *NewPreHeader = L->getLoopPreheader(); 
-    NewPreHeader = Header; 
-
-
     return new_loop;
 }
 
@@ -162,6 +161,7 @@ void SplitPass::remapInstruction(Instruction *I,  ValueToValueMapTy &VMap) {
     }
 }
 
+
 bool SplitPass::runOnFunction(Function &F) {
     PI = &getAnalysis<ProfileInfo>();
     LI = &getAnalysis<LoopInfo>();
@@ -182,9 +182,11 @@ bool SplitPass::runOnFunction(Function &F) {
         if (L->getParentLoop() != 0) continue; //skip non-toplevel loop in the iteration
         for (unsigned i=0; i<split_count; ++i) {
             Loop* lp = CreateOneLoop(L);
-            LI->addTopLevelLoop(lp); 
+            if (lp) {
+                LI->addTopLevelLoop(lp); 
+            }
         }
-        //break; // TODO work on first loop of a function only
+        // break; // TODO work on first loop of a function only
     }
 
 
