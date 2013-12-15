@@ -438,18 +438,19 @@ void scc::one_prdg (rdg_p rdg, rdg_vertex_p v, int p)
 
   (RDGV_PARTITIONS (v)).push_back(p);
 
-    for(std::vector<rdg_edge_p>::iterator it=(RDGV_IN (v)).begin();it!=(RDGV_IN (v)).end();++it)
-    {
-      i_edge = *it;
-      if (RDGE_SCALAR_P (i_edge))
+  for(std::vector<rdg_edge_p>::iterator it=(RDGV_IN (v)).begin();it!=(RDGV_IN (v)).end();++it)  {
+    i_edge = *it;
+ errs() << "debug\n";
+    if (RDGE_SCALAR_P (i_edge))
       one_prdg (rdg, RDGE_SOURCE (i_edge), p);
-    }
+  }
+
   if (!can_recompute_vertex_p (v))
-      for(std::vector<rdg_edge_p>::iterator it=(RDGV_OUT (v)).begin();it!=(RDGV_OUT (v)).end();++it)
-      {
+    for(std::vector<rdg_edge_p>::iterator it=(RDGV_OUT (v)).begin();it!=(RDGV_OUT (v)).end();++it) {
+ errs() << "debug\n";
       if (RDGE_SCALAR_P (o_edge))
         one_prdg (rdg, RDGE_SINK (o_edge), p);
-      }
+    }
 }
 
 bool scc::correct_partitions_p (rdg_p rdg, int p)
@@ -645,6 +646,7 @@ void scc::create_vertices (rdg_p rdg)
   Loop *loop_nest = RDG_LOOP (rdg);
   
   RDG_NBV (rdg) = number_of_vertices (rdg,depmap);
+  RDG_V (rdg) = XCNEWVEC (struct rdg_vertex, RDG_NBV (rdg));
   
   vertex_index = 0;
   std::vector<BasicBlock*> bb = loop_nest->getBlocks();
@@ -655,10 +657,10 @@ void scc::create_vertices (rdg_p rdg)
     
       for (bsi = bb_p->begin(); bsi!= bb_p->end(); ++bsi)
         {
-//	  Instruction instrs = *bsi;
-
+          	  Instruction *instrs = bsi;
               rdg_vertex_p v = RDG_VERTEX (rdg, vertex_index);
               RDGV_INSTRS (v) = bsi;
+              RDGV_INSTRS (v) = instrs;
               RDGV_N (v) = vertex_index;
               RDGV_BB (v) = i;
               RDGV_COLOR (v) = 0;
