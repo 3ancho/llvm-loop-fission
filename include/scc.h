@@ -13,6 +13,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "DG.h"
+#include <stdio.h>
 
 # define RDG_VS 10
 
@@ -298,6 +299,8 @@ int number_of_edges (rdg_p rdg, DG *depmap);
 void create_vertices (rdg_p rdg);
 
 void create_edges (rdg_p rdg);
+  
+void update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg, unsigned int index_of_edge);
 
 rdg_p build_rdg (Loop *loop_nest);
 
@@ -313,7 +316,7 @@ void dump_prdg (FILE *outf, prdg_p rdgp);
 
 void dump_rdg (FILE *outf, rdg_p rdg);
 
-split_scc out_scc(std::vector <prdg_vertex_p> scc, Loop *loop_nest);
+void out_scc(std::vector <prdg_vertex_p> scc, Loop *loop_nest);
 
 //////////////////END functions to generate scc//////////////////
 
