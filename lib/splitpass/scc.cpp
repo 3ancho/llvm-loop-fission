@@ -760,7 +760,7 @@ void scc::update_edge_with_ddv (ddr_p ddr0, rdg_p rdg, unsigned int index_of_edg
 rdg_p scc::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
-//  std::vector<ddr_p> *dep_r;
+//  std::vector<ddr_p> *dep_r = new (std::vector<ddr_p>);
   std::vector<rdg_vertex_p> dd_vertices;
   unsigned int i;
   rdg_vertex_p vertex;
@@ -780,10 +780,10 @@ rdg_p scc::build_rdg (Loop *loop_nest)
     std::set<Instruction*> set_temp = mapit2->second;
     std::set<Instruction*>::iterator setit;
     for (setit = set_temp.begin(); setit != set_temp.end(); ++setit) {
-      errs() << "123\n";
       ddr_p s = new (ddr);
       s->a = inst;
       s->b = *setit;
+      errs() << "123\n";
       RDG_DDR (rdg).push_back(s);
     }
   }
