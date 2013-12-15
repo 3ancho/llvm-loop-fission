@@ -832,7 +832,7 @@ void scc::do_distribution (Loop *loop_nest)
   
   dloops = topological_sort (sccg);
 
-  outscc = split_scc(dloops);
+  outscc = split_scc(dloops, loop_nest);
 
   if (dump_file)
     {
@@ -957,14 +957,18 @@ dump_rdg (FILE *outf, rdg_p rdg)
   fprintf (outf, "</dd_vertices>\n");
 }
 
-split_scc out_scc(std::vector<prdg_vertex_p> scc)
+void out_scc(std::vector<prdg_vertex_p> scc, Loop *loop_nest)
 {
-  split_scc outscc;
+  std::vector<std::vector<Instruction*> > sccs;
+  std::vector<Instruction*> single_scc;
   std::vector<rdg_vertex_p> pvertices;
+
   for (i = 0; i < scc.size(); i++){
     pvertices = scc[i].pvertices;
     for (j = 0; j < pvertices.size(); j++)
-      outscc = pvertices[j]->instrs;
+      single_scc.push_back(pvertices[j]->instrs);
+    sccs.push_back(single_scc);
   }
+  outscc[loop_nest] = sccs;
 }
 

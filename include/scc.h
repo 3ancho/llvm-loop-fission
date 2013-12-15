@@ -314,7 +314,7 @@ void dump_prdg (FILE *outf, prdg_p rdgp);
 
 void dump_rdg (FILE *outf, rdg_p rdg);
 
-split_scc out_scc(std::vector <prdg_vertex_p> scc);
+split_scc out_scc(std::vector <prdg_vertex_p> scc, Loop *loop_nest);
 
 //////////////////END functions to generate scc//////////////////
 
