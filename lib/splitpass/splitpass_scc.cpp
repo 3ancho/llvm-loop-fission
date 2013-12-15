@@ -44,7 +44,8 @@ namespace {
                     std::map<Instruction*, std::set<Instruction*> > &Map);
             void DFSUtil(Instruction* Inst, 
                     std::map<Instruction*, bool> visited, 
-                    std::map<Instruction*, std::set<Instruction*> > &Map);
+                    std::map<Instruction*, std::set<Instruction*> > &Map,
+                    std::vector<Instruction*> new_scc);
 
             
             // clone the given loop, L 
@@ -67,7 +68,6 @@ Loop * SplitPassSCC::CreateOneLoop(Loop *L) {
 
     BasicBlock *Header = L->getHeader();
     std::vector< BasicBlock * > body = L->getBlocks();
-    DEBUG(dbgs() << "Test \n");
     BasicBlock *PreHeader = L->getLoopPredecessor(); 
 
     BasicBlock *Exit = L->getExitBlock(); 
@@ -189,10 +189,9 @@ bool SplitPassSCC::runOnFunction(Function &F) {
 
         // scc
         std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[L];
-        std::vector<std::vector<Instruction*> > scc;
+        std::vector<std::vector<Instruction*> > sccs;
 
         std::stack<Instruction*> Stack;
-        unsigned V = scc.size(); // hard code TODO use SCC map 
 
         std::map<Instruction*, bool> visited;
 
@@ -230,25 +229,51 @@ bool SplitPassSCC::runOnFunction(Function &F) {
             visited[it->first] = false;
         }
 
+        std::vector<Instruction*> new_scc;
         while (Stack.empty() == false) {
             Instruction* Inst = Stack.top();
             Stack.pop();
 
             if (visited[Inst] == false) {
-                DFSUtil(Inst, visited, dg_reverse);
+                DFSUtil(Inst, visited, dg_reverse, new_scc);
+                sccs.push_back(new_scc);
+                new_scc.clear();
                 DEBUG(dbgs() << "---------- SSC ------------\n") ;
             }
         }
 
 
+        unsigned V = sccs.size(); // hard code TODO use SCC map 
+        DEBUG(dbgs() << " SSC count: " << V <<" \n" );
         //// split
+        std::vector<Loop*> loops; 
         //for (unsigned i=0; i<V; ++i) {
         //    Loop* lp = CreateOneLoop(L);
         //    if (lp) {
         //        LI->addTopLevelLoop(lp); 
+        //        loops.push_back(lp);
         //    }
         //}
-        //// break; // TODO work on first loop of a function only
+        // break; // TODO work on first loop of a function only
+        //
+        //std::vector< BasicBlock * > body;
+        //BasicBlock * Head;
+        //BasicBlock * Latch;
+
+        //for (unsigned i=0; i<V; ++i) {
+        //    body = L->getBlocks();
+        //    Head = L->getHeader();
+        //    Latch = L->getLoopLatch();
+        //    for(unsigned body_i=0; i<body.size(); ++body_i) {
+        //        if (body[body_i] == Head || body[body_i] == Latch) continue;
+        //        for (BasicBlock::iterator BBI = body[body_i]->begin(), BBIE = body[body_i]->end(); BBI != BBIE; ++BBI)  {
+        //            if (sccs[i][*BBI] == NULL) {
+        //                // if scc[i] doens't have this inst, remove it from loop[i]
+        //                (*BBI)->eraseFromParent();
+        //            }
+        //        }
+        //    }
+        //}
     }
 
 
@@ -261,12 +286,15 @@ bool SplitPassSCC::runOnFunction(Function &F) {
 }
 
 void SplitPassSCC::DFSUtil(Instruction* Inst, std::map<Instruction*, bool> visited, 
-                    std::map<Instruction*, std::set<Instruction*> > &Map)
+                    std::map<Instruction*, std::set<Instruction*> > &Map,
+                    std::vector<Instruction*> new_scc)
 {
     // Mark the current node as visited and print it
     visited[Inst] = true;
 
     // add Inst to SSC 1
+    new_scc.push_back(Inst);
+
     DEBUG(dbgs() << "Inst: ");
     Inst->dump();
  
@@ -274,7 +302,7 @@ void SplitPassSCC::DFSUtil(Instruction* Inst, std::map<Instruction*, bool> visit
     for (std::set<Instruction*>::iterator it=Map[Inst].begin(); 
             it!=Map[Inst].end(); ++it) {
         if(!visited[*it]) {
-            DFSUtil(*it, visited, Map);
+            DFSUtil(*it, visited, Map, new_scc);
         }
     }
 }
