@@ -45,7 +45,7 @@
 #define RDGV_SCCS(V)       (V)->scc_numbers
 
 #define XNEW(T)        ((T *) xmalloc (sizeof (T)))
-#define XCNEWVEC(T, N) ((T *) xcalloc ((N), sizeof (T)))
+#define XCNEWVEC(T, N) ((T *) calloc ((N), sizeof (T)))
 
 //////////// RDGE
 #define RDGE_COLOR(E)       (E)->color
