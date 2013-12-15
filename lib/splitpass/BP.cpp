@@ -56,14 +56,26 @@ void BP::getAnalysisUsage(AnalysisUsage &AU) const {
 
 
 void BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
-int NumOfNode = depmap->numOfNodes[CurL];
-inst_visit visit_flag;
-for(int Iidx=0;Iidx<NumOfNode;Iidx++)
-  visit_flag[Iidx]=false;
+  int NumOfNode = depmap->numOfNodes[CurL];
+  std::vector<inst_visit> visit_flag;
+  inst_set all_insts;
 
-for(int Iidx=0;Iidx<NumOfNode;Iidx++)
-{
-  Instruction* curInstr = 
-}
+  inst_visit tmp_vf;
+  inst_map_set::iterator it;
+  for(it=CurInstMapSet.begin();it!=CurInstMapSet.end();++it){
+    Instruction* curInstr = it->first;
+    tmp_vf->first = curInstr;
+    tmp_vf->second = false;
+    visit_flag.push_back(tmp_vf);
+    all_insts.insert(curInstr);
+  }
+
+  int idx=0;
+  for(it=CurInstMapSet.begin();it!=CurInstMapSet.end();++it,idx++){
+    Instruction* curInstr = it->first;
+    tmp_vf = visit_flag.at(idx);
+    if(tmp_vf->second) continue;
+    dfs(curInstr, CurInstMapSet, all_insts, &visit_flag);
+  }  
 
 }
