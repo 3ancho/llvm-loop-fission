@@ -84,10 +84,10 @@ void scc::getAnalysisUsage(AnalysisUsage &AU) const {
 std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap)
 {
   std::vector<ddr> ddr_0; 
-  std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLoops = depmap->dgOfLoops[loop_nest];
-  for (mapit1 = dgOfLoops.begin(); mapit1 != dgOfLoops.end(); ++mapit1) {
+  std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[loop_nest];
+//  for (mapit1 = dgOfLoops.begin(); mapit1 != dgOfLoops.end(); ++mapit1) {
     int count = 0;
-    std::map<Instruction*, std::set<Instruction*> > dg_temp = mapit1->seconnd;
+//    std::map<Instruction*, std::set<Instruction*> > dg_temp = mapit1->seconnd;
     std::map<Instruction*, std::set<Instruction*> >::iterator mapit2;
     for (mapit2 = dg_temp.begin; mapit2 != dg_temp.end(); ++mapit2) {
       Instruction *inst = mapit2->first;
@@ -100,7 +100,7 @@ std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *de
         ddr_0.push_back(s); 
       }
     }
-  }
+//  }
   return ddr_0;
 
 }
