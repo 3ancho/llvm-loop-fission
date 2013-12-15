@@ -63,7 +63,10 @@ void DG::buildDG(Loop *L) {
 			// def-use chain
             for (Value::use_iterator ui = SrcI->use_begin(), ue = SrcI->use_end(); ui != ue; ++ui) {
               if (Instruction *inst = dyn_cast<Instruction>(*ui)) {
-                daSet.insert(inst);
+			    if(std::find(bodyInsts.begin(), bodyInsts.end(), inst)!=bodyInsts.end()){
+                  // the use inst is in the body blocks as well
+                  daSet.insert(inst);
+                }
               }
             }
           }
