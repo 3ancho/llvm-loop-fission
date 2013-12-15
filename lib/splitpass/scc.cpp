@@ -53,6 +53,7 @@ void scc::outputSCC(Loop *L) {
           errs() << "Hello: There are " << depmap->numOfNodes[L] << " nodes in the loop\n";
           errs() << "Hello: There are " << depmap->numOfDeps[L] << " data dependencies in the loop\n";
 */
+          do_distribution (L); 
         }
       }
     } else {
@@ -61,7 +62,8 @@ void scc::outputSCC(Loop *L) {
       }
 	}
 
-	}
+}
+
 bool scc:: runOnFunction(Function &F) {
 	  LI = &getAnalysis<LoopInfo>();
 	  depmap = &getAnalysis<DG>();
@@ -776,8 +778,6 @@ rdg_p scc::build_rdg (Loop *loop_nest)
   
   create_vertices (rdg);
   create_edges (rdg);
-
-
 
   for (i = 0; i < RDG_NBV (rdg); i++)
     {
