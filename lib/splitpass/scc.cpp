@@ -424,7 +424,6 @@ bool scc::can_recompute_vertex_p (rdg_vertex_p v)
   return true;
 }
 
-
 void scc::one_prdg (rdg_p rdg, rdg_vertex_p v, int p)
 {
   rdg_edge_p o_edge, i_edge;
@@ -448,7 +447,6 @@ void scc::one_prdg (rdg_p rdg, rdg_vertex_p v, int p)
         one_prdg (rdg, RDGE_SINK (o_edge), p);
       }
 }
-
 
 bool scc::correct_partitions_p (rdg_p rdg, int p)
 {
@@ -599,7 +597,6 @@ prdg_p scc:build_prdg (rdg_p rdg)
   return rdgp;
 }
 
-
 rdg_vertex_p scc::find_vertex_with_instrs (rdg_p rdg, Instruction instrs)
 {
   rdg_vertex_p vertex = NULL;
@@ -626,7 +623,6 @@ bool scc::contains_dr_p ( Instruction instrs, std::vector<ddr_p> pddr)
 
 }
 
-
 int scc::number_of_vertices (rdg_p rdg, DG *depmap)
 {
  return depmap->numOfNodes[RDG_LOOP(rdg)];
@@ -634,7 +630,6 @@ int scc::number_of_vertices (rdg_p rdg, DG *depmap)
 
 int scc::number_of_edges (rdg_p rdg, DG *depmap)
 {  return depmap->numOfDeps[RDG_LOOP(rdg)];}
-
 
 void scc::create_vertices (rdg_p rdg)
 {
@@ -800,7 +795,6 @@ rdg_p scc::build_rdg (Loop *loop_nest)
   return rdg;
 }
 
-
 void scc::do_distribution (Loop *loop_nest)
 {
   rdg_p rdg; /* Reduced dependence graph.  */
@@ -963,8 +957,14 @@ dump_rdg (FILE *outf, rdg_p rdg)
   fprintf (outf, "</dd_vertices>\n");
 }
 
-split_scc out_scc(std::vector <prdg_vertex_p> scc)
+split_scc out_scc(std::vector<prdg_vertex_p> scc)
 {
-  return 0;
+  split_scc outscc;
+  std::vector<rdg_vertex_p> pvertices;
+  for (i = 0; i < scc.size(); i++){
+    pvertices = scc[i].pvertices;
+    for (j = 0; j < pvertices.size(); j++)
+      outscc = pvertices[j]->instrs;
+  }
 }
 

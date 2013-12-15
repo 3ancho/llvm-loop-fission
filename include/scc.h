@@ -314,11 +314,12 @@ void dump_prdg (FILE *outf, prdg_p rdgp);
 
 void dump_rdg (FILE *outf, rdg_p rdg);
 
-split_scc out_scc(std::vector<prdg_vertex_p>);
+split_scc out_scc(std::vector <prdg_vertex_p> scc);
 
 //////////////////END functions to generate scc//////////////////
 
 //////////////////scc//////////////////
+//typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > split_scc;
 split_scc outscc;
 ///////////////////////////////////////
 
