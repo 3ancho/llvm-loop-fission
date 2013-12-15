@@ -7,7 +7,7 @@
 using namespace llvm;
 
 char BP::ID = 0;
-static RegisterPass<BP> X("BP", "BP Pass", false, false);
+static RegisterPass<BP> X("bp", "BP Pass", false, false);
 
 void BP::OutputBP(Loop *L) {
 	
@@ -69,15 +69,18 @@ void BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     visit_flag.push_back(tmp_vf);
     all_insts.insert(curInstr);
   }
+  
+  std::vector<std::vector<Instruction*> > CurLoopScc;
 
   int idx=0;
   for(it=CurInstMapSet.begin();it!=CurInstMapSet.end();++it,idx++){
     Instruction* curInstr = it->first;
     tmp_vf = visit_flag.at(idx);
     if(tmp_vf->second) continue;
-    dfs(curInstr, CurInstMapSet, all_insts, &visit_flag);
-  }  
-
+    CurLoopScc.push_back(dfs(curInstr, CurInstMapSet, all_insts, &visit_flag));
+  } 
+  loop_sccs[CurL] = CurLoopScc;
+}
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
   inst_vec group;
   inst_set dep_insts = dg_of_loop[start_inst];  //all insts that start_inst related to

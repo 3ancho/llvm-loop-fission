@@ -30,7 +30,7 @@ typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
   class raw_ostream;
 
   class BP::public FunctionPass{
-	public:
+    public:
     AliasAnalysis *AA;
     Function *F;
     DependenceAnalysis *DA;
