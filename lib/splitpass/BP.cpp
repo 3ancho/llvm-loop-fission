@@ -7,7 +7,7 @@
 using namespace llvm;
 
 char BP::ID = 0;
-static RegisterPass<BP> X("BP", "BP Pass", false, false);
+static RegisterPass<BP> X("bp", "BP Pass", false, false);
 
 void BP::OutputBP(Loop *L) {
 	
@@ -67,6 +67,8 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     tmp_vf.insert (std::pair<Instruction*, bool> (curInstr, false));
     all_insts.insert(curInstr);
   }
+  
+  std::vector<std::vector<Instruction*> > CurLoopScc;
 
   //recursive dfs
   int idx = 0;
@@ -77,7 +79,6 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
   } 
   
   return partition;
-}
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
   inst_vec group;
