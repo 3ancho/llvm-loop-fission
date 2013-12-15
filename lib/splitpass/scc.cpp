@@ -84,9 +84,9 @@ void scc::getAnalysisUsage(AnalysisUsage &AU) const {
 ////////////END public implementation//////////////////
 
 //////////private implementation/////////////////////
-std::vector<ddr_p> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap)
+//std::vector<ddr_p> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap)
+void scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap, std::vector<ddr_p> *ddr_0)
 {
-  std::vector<ddr_p> ddr_0; 
   std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[loop_nest];
 //  for (mapit1 = dgOfLoops.begin(); mapit1 != dgOfLoops.end(); ++mapit1) {
 //    int count = 0;
@@ -101,11 +101,10 @@ std::vector<ddr_p> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *
         ddr_p s = &s_ins;
         s->a = inst;
         s->b = *setit;
-        ddr_0.push_back(s); 
+        ddr_0->push_back(s); 
       }
     }
 //  }
-  return ddr_0;
 
 }
 
@@ -761,7 +760,7 @@ void scc::update_edge_with_ddv (ddr_p ddr0, rdg_p rdg, unsigned int index_of_edg
 rdg_p scc::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
-//  std::vector<ddr> *dependence_relations;
+//  std::vector<ddr_p> *dep_r;
   std::vector<rdg_vertex_p> dd_vertices;
   unsigned int i;
   rdg_vertex_p vertex;
@@ -774,7 +773,21 @@ rdg_p scc::build_rdg (Loop *loop_nest)
   rdg = XNEW (struct rdg);
   RDG_LOOP (rdg) = loop_nest;
 
-  RDG_DDR (rdg) = compute_data_dependences_for_loop (loop_nest, depmap); 
+  std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[loop_nest];
+  std::map<Instruction*, std::set<Instruction*> >::iterator mapit2;
+  for (mapit2 = dg_temp.begin(); mapit2 != dg_temp.end(); ++mapit2) {
+    Instruction *inst = mapit2->first;
+    std::set<Instruction*> set_temp = mapit2->second;
+    std::set<Instruction*>::iterator setit;
+    for (setit = set_temp.begin(); setit != set_temp.end(); ++setit) {
+      errs() << "123\n";
+      ddr_p s = new (ddr);
+      s->a = inst;
+      s->b = *setit;
+      RDG_DDR (rdg).push_back(s);
+    }
+  }
+//  compute_data_dependences_for_loop (loop_nest, depmap, dep_r); 
   
   create_vertices (rdg);
   create_edges (rdg);

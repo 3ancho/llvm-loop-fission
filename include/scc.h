@@ -160,6 +160,7 @@ struct data_dependence_relation
   Instruction *b;
 };
 
+
 struct rdg_edge 
 {
   /* Color used for graph algorithms.  */  
@@ -246,7 +247,9 @@ struct prdg_edge
 //    LoopInfo *LI;
 
 /////////////////////functions to generate scc///////////////////
-std::vector<ddr_p> compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap);
+
+//std::vector<ddr_p> compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap);
+void compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap, std::vector<ddr_p> *ddr_0);
 
 void dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned int scc);
 
