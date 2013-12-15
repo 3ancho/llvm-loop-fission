@@ -298,6 +298,7 @@ prdg_vertex_p scc::new_prdg_vertex (unsigned int p)
   PRDGV_F (v) = 0;
   PRDGV_PRED (v) = NULL;
   PRDGV_SCC (v) = 0;
+  PRDGV_PV (v) = XNEW(std::vector<rdg_vertex_p>);
   return v;
 }
 
@@ -332,6 +333,8 @@ prdg_p scc::new_prdg (rdg_p rdg)
   prdg_p rdgp = new (struct prdg);
 
   PRDG_RDG (rdgp) = rdg;
+  PRDG_V (rdgp) = XNEW (std::vector<prdg_vertex_p>);
+  PRDG_E (rdgp) = XNEW (std::vector<prdg_edge_p>);
 
   return rdgp;
 }
@@ -436,20 +439,26 @@ void scc::one_prdg (rdg_p rdg, rdg_vertex_p v, int p)
   if (vertex_in_partition_p (v, p))
     return;
 
+//  errs() << "1\n";
   (RDGV_PARTITIONS (v))->push_back(p);
+//  errs() << "2\n";
 
     for(std::vector<rdg_edge_p>::iterator it=(RDGV_IN (v))->begin();it!=(RDGV_IN (v))->end();++it)
     {
+//  errs() << "3\n";
       i_edge = *it;
       if (RDGE_SCALAR_P (i_edge))
       one_prdg (rdg, RDGE_SOURCE (i_edge), p);
-    }
+  }
+
   if (!can_recompute_vertex_p (v))
       for(std::vector<rdg_edge_p>::iterator it=(RDGV_OUT (v))->begin();it!=(RDGV_OUT (v))->end();++it)
       {
-      if (RDGE_SCALAR_P (o_edge))
+       o_edge = *it;
+      if (RDGE_SCALAR_P (o_edge)){
         one_prdg (rdg, RDGE_SINK (o_edge), p);
       }
+    }
 }
 
 bool scc::correct_partitions_p (rdg_p rdg, int p)
@@ -550,7 +559,7 @@ unsigned int scc::mark_partitions (rdg_p rdg)
       for (k = 1; k <= p; k++)
 	(RDGV_PARTITIONS (RDG_VERTEX (rdg, i)))->push_back(k);
     
-	if(correct_partitions_p (rdg, p)) errs()<<"wrong partition\n";
+//	if(correct_partitions_p (rdg, p)) errs()<<"wrong partition\n";
   
   return p;
 }
@@ -562,6 +571,7 @@ prdg_p scc::build_prdg (rdg_p rdg)
   prdg_p rdgp = new_prdg (rdg);
   unsigned int nbp = mark_partitions (rdg);
   
+  errs() << "creating vertices...\n";
   /* Create partition vertices.  */
   for (i = 0; i < nbp; i++)
     {
@@ -580,6 +590,7 @@ prdg_p scc::build_prdg (rdg_p rdg)
 
     }
 
+  errs() << "creating edges...\n";
   /* Create partition edges.  */
   for (i = 0; i < rdg->nb_edges; i++)
     {
@@ -645,6 +656,7 @@ void scc::create_vertices (rdg_p rdg)
   Loop *loop_nest = RDG_LOOP (rdg);
   
   RDG_NBV (rdg) = number_of_vertices (rdg,depmap);
+  RDG_V (rdg) = XCNEWVEC (struct rdg_vertex, RDG_NBV (rdg));
   
   vertex_index = 0;
   std::vector<BasicBlock*> bb = loop_nest->getBlocks();
@@ -655,14 +667,19 @@ void scc::create_vertices (rdg_p rdg)
     
       for (bsi = bb_p->begin(); bsi!= bb_p->end(); ++bsi)
         {
-//	  Instruction instrs = *bsi;
-
+          	  Instruction *instrs = bsi;
               rdg_vertex_p v = RDG_VERTEX (rdg, vertex_index);
-              RDGV_INSTRS (v) = bsi;
+              RDGV_INSTRS (v) = instrs;
               RDGV_N (v) = vertex_index;
               RDGV_BB (v) = i;
               RDGV_COLOR (v) = 0;
               RDGV_DD_P (v) = contains_dr_p (bsi, RDG_DDR (rdg));
+              RDGV_IN (v) = XCNEWVEC(std::vector<rdg_edge_p>, RDG_NBV (rdg)); 
+              RDGV_OUT (v) = XCNEWVEC(std::vector<rdg_edge_p>, RDG_NBV (rdg)); 
+//              RDGV_IN (v) = XNEW(std::vector<rdg_edge_p>); 
+//              RDGV_OUT (v) = XNEW(std::vector<rdg_edge_p>); 
+              RDGV_PARTITIONS (v) = XNEW(std::vector<int>);
+              RDGV_SCCS (v) = XNEW(std::vector<int>);
               vertex_index++;
 
         }
@@ -705,7 +722,6 @@ void scc::update_edge_with_ddv (ddr_p ddr0, rdg_p rdg, unsigned int index_of_edg
   rdg_edge_p edge = RDG_EDGE (rdg, index_of_edge);
   rdg_vertex_p va;
   rdg_vertex_p vb;
-  
 
   /* Invert data references according to the direction of the 
      dependence.  */
@@ -755,6 +771,9 @@ void scc::update_edge_with_ddv (ddr_p ddr0, rdg_p rdg, unsigned int index_of_edg
 //  VEC_safe_push (rdg_edge_p, heap, RDGV_OUT (va), edge);
 //  VEC_safe_push (rdg_edge_p, heap, RDGV_IN (vb), edge);
   (RDGV_OUT(va))->push_back(edge);
+//  errs() << "size:" << RDGV_IN(vb)->size() << "\n";
+//  for (unsigned j = 0; j < RDGV_IN(vb)->size(); j++)
+//   errs() << (*RDGV_IN(vb))[j] << "\n";
   (RDGV_IN(vb))->push_back(edge);
 }
 
@@ -793,18 +812,12 @@ rdg_p scc::build_rdg (Loop *loop_nest)
   create_vertices (rdg);
   create_edges (rdg);
 
-  for (i = 0; i < RDG_NBV (rdg); i++)
-    {
+  for (i = 0; i < RDG_NBV (rdg); i++) {
       vertex = RDG_VERTEX (rdg, i);
-
       if (RDGV_DD_P (vertex))
 //	VEC_safe_push (rdg_vertex_p, heap, RDG_DDV (rdg), vertex);
-
-        (RDG_DDV (rdg))->push_back(vertex);
-
-        dd_vertices->push_back(vertex);
-
-    }
+      dd_vertices->push_back(vertex);
+   }
 
    RDG_DDV(rdg) = dd_vertices;
 
@@ -820,6 +833,7 @@ void scc::do_distribution (Loop *loop_nest)
   FILE * dump_file;
   dump_file = fopen ("scc.log", "w");
 
+  errs() << "building rdg...\n";
   rdg = build_rdg (loop_nest);
 
   if (dump_file)
@@ -829,6 +843,7 @@ void scc::do_distribution (Loop *loop_nest)
       fprintf (dump_file, "</rdg>\n");
     }
 
+  errs() << "building prdg...\n";
   rdgp = build_prdg (rdg);      
   
   if (dump_file)
@@ -838,6 +853,7 @@ void scc::do_distribution (Loop *loop_nest)
       fprintf (dump_file, "</prdg>\n");
     }
   
+  errs() << "building scc...\n";
   sccg = build_scc_graph (rdgp);
 
   if (dump_file)
@@ -847,6 +863,7 @@ void scc::do_distribution (Loop *loop_nest)
       fprintf (dump_file, "</sccp>\n");
     }
   
+  errs() << "sorting scc...\n";
   dloops = topological_sort (sccg);
 
   if (dump_file)
@@ -865,6 +882,7 @@ void scc::do_distribution (Loop *loop_nest)
       fprintf (dump_file, "</topological_sort>\n");
     }
 
+  errs() << "cleaning up...\n";
 //  free_rdg (rdg);
   free_prdg (rdgp);
   free_prdg (sccg);

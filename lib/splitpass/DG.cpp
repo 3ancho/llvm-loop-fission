@@ -9,20 +9,35 @@ void DG::buildDG(Loop *L) {
   std::vector<Loop*> subLoops = L->getSubLoops();
   if (subLoops.empty()) {
     // this is the innermost loop. Do the analysis.
+	// first get all the instructions in the loop body
+    std::vector<Instruction*> bodyInsts;
+	bodyInsts.clear();
+	BasicBlock *Header = L->getHeader();
+	//BasicBlock *Latch = L->getLoopLatch();
+	//errs() << "Latch ---------------- " << *Latch << "\n";
+    for (unsigned j = 0, k = L->getBlocks().size(); j != k; ++j) {
+      BasicBlock *BB = L->getBlocks()[j];
+      if (BB != Header) {
+	    errs() << "BB is in the body-------------------------------------: " << *BB << "\n";
+	    for (BasicBlock::iterator i = BB->begin(), e = BB->end(); i != e; ++i) {
+		  Instruction *Inst = i;
+		  bodyInsts.push_back(Inst);
+		}
+	  }
+	}
+	errs() << "bodyInsts size is " << bodyInsts.size() << "\n";
     DA = &getAnalysis<DependenceAnalysis>();
     std::map<Instruction*, std::set<Instruction*> > daMap;
     daMap.clear();
     numOfNodes[L] = 0;
     numOfDeps[L] = 0;
     std::set<Instruction*> daSet;
-    for (Loop::block_iterator LB = L->block_begin(), LBE = L->block_end(); LB != LBE; ++LB) {
-	  for (BasicBlock::iterator BI = (*LB)->begin(), BIE = (*LB)->end(); BI != BIE; ++BI) {
-        Instruction *SrcI = BI;
+	  for (std::vector<Instruction*>::iterator vi2 = bodyInsts.begin(); vi2 != bodyInsts.end(); ++vi2) {
+        Instruction *SrcI = *vi2;
         daSet.clear();
         numOfNodes[L]++;
-        for (Loop::block_iterator LBB = L->block_begin(), LBBE = L->block_end(); LBB != LBBE; ++LBB) {
-          for (BasicBlock::iterator BBI = (*LBB)->begin(), BBIE = (*LBB)->end(); BBI != BBIE; ++BBI) {
-            Instruction *DstI = BBI;
+          for (std::vector<Instruction*>::iterator vi3 = bodyInsts.begin(); vi3 != bodyInsts.end(); ++vi3) {
+            Instruction *DstI = *vi3;
             if (DstI == SrcI) continue;
             if ((isa<StoreInst>(*DstI) || isa<LoadInst>(*DstI)) 
                && (isa<StoreInst>(*SrcI) || isa<LoadInst>(*SrcI))) {
@@ -52,10 +67,8 @@ void DG::buildDG(Loop *L) {
               }
             }
           }
-        }
         daMap[SrcI] = daSet;
       }
-    }
     dgOfLoops[L] = daMap;
   } else {
     for (std::vector<Loop*>::iterator it = subLoops.begin() ; it != subLoops.end(); ++it) {
