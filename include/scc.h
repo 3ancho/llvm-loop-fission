@@ -89,12 +89,12 @@ typedef struct prdg_edge *prdg_edge_p;
 typedef struct data_dependence_relation ddr;
 typedef struct data_dependence_relation *ddr_p;
 
+typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > split_scc;
 
 namespace llvm {
 /////////////// data structure ////////////////
 struct rdg 
 {
-/////////////////////NOTICE: COMMENT OUT BUT SHOULD BE NEEDED IN THE FUTURE
 
   // The loop nest represented by this RDG.  
   Loop *loop_nest;
@@ -128,7 +128,7 @@ struct rdg_vertex
      the statement in the basic block.  */
   unsigned int number;
     /* The instruction represented by this vertex.  */
- 	struct INSTRUCTION instrs;
+ 	Instruction *instrs;
 /////////////////// 
   /* True when this vertex contains a data reference 
      that is an ARRAY_REF.  */
@@ -234,9 +234,9 @@ struct prdg_edge
   class DependenceAnalysis;
   class Value;
   class raw_ostream;
-  class DG;
+  class scc;
   
-  class DG : public FunctionPass {
+  class scc : public FunctionPass {
   private:
     AliasAnalysis *AA;
     Function *F;
@@ -288,7 +288,7 @@ unsigned int mark_partitions (rdg_p rdg);
 
 prdg_p build_prdg (rdg_p rdg);
 
-rdg_vertex_p find_vertex_with_instrs (rdg_p rdg, Instruction instrs);
+rdg_vertex_p find_vertex_with_instrs (rdg_p rdg, Instruction * instrs);
 
 bool contains_dr_p (Instruction instrs, ddr_p dp);
 
@@ -302,30 +302,34 @@ void create_edges (rdg_p rdg);
 
 rdg_p build_rdg (Loop *loop_nest);
 
-void do_distribution (Loop *loop_nest)
+std::vector<prdg_vertex_p> topological_sort (prdg_p g);
 
-void open_loop_dump (Loop *loop_nest)
+void do_distribution (Loop *loop_nest, DG *depmap);
 
-void close_loop_dump (Loop *loop_nest)
+void open_loop_dump (Loop *loop_nest);
+
+void close_loop_dump (Loop *loop_nest);
 
 void dump_prdg (FILE *outf, prdg_p rdgp);
 
 void dump_rdg (FILE *outf, rdg_p rdg);
 
+split_scc out_scc(std::vector<prdg_vertex_p>);
+
 //////////////////END functions to generate scc//////////////////
 
+//////////////////scc//////////////////
+split_scc outscc;
+///////////////////////////////////////
 
   public:
     static char ID; 
-    DG() : FunctionPass(ID) {};
-    std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLoops;
-    std::map<Loop*, int> numOfNodes;
-    std::map<Loop*, int> numOfDeps;
+    scc() : FunctionPass(ID) {};
     bool runOnFunction(Function &F);
     void getAnalysisUsage(AnalysisUsage &) const;
-//    void printDG();
-//    void buildDG(Loop *);
-  }; // class DG
+    LoopInfo *LI;
+    DG *depmap;
+  }; // class scc
 
 } // namespace llvm
 

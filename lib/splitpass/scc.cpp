@@ -17,8 +17,8 @@ the DG pass. There are a few things:
 
 using namespace llvm;
 /////////////////////NOTICE these two have to appear in scc.h///////////
-	LoopInfo *LI;
-	DG *depmap;
+//	LoopInfo *LI;
+//	DG *depmap;
 /////////////////END NOTICE/////////////////////////////////////////////
 
 char scc::ID = 0;
@@ -471,8 +471,47 @@ bool scc::correct_partitions_p (rdg_p rdg, int p)
   return true;
 }
 
+std::vector <prdg_vertex_p>
+topological_sort (prdg_p g)
+{
+  unsigned int max_f, i;
+  prdg_vertex_p *vertices;
+  prdg_vertex_p v;
+  std::vector<prdg_vertex_p> sorted_vertices;
+  
+  /* Depth First Search.  */
+  max_f = dfs_rdgp (g);
+  
+  /* Allocate array of vertices.  */
+  vertices = XCNEWVEC (prdg_vertex_p, max_f+1);
+  
+  /* Allocate a vector for sorted vertices.  */ 
+//  sorted_vertices = VEC_alloc (prdg_vertex_p, heap, RDG_VS);
+  
+  /* All vertices are set to NULL.  */
+  for (i = 0; i <= max_f; i++)
+    vertices[i] = NULL;
+  
+  /* Iterate on each vertex of the PRDG and put each vertex at
+     the right place.  */
+//  for (i = 0; VEC_iterate (prdg_vertex_p, PRDG_V (g), i, v); i++)
+//    vertices[PRDGV_F (v)] = v;
+//  for (i = 0; VEC_iterate (prdg_vertex_p, PRDG_V (g), i, v); i++)
+  for (i = 0; i < max_f; i++){
+    v = (PRDG_V (g))[i];
+    vertices[PRDGV_F (v)] = v;
+  }
 
-
+  /* Push all non-NULL vertices to vector of vertices.  */
+  for (i = max_f; i > 0; i--)
+    if (vertices[i])
+      sorted_vertices.push_back(vertices[i]);
+//      VEC_safe_push (prdg_vertex_p, heap, sorted_vertices, vertices[i]);
+  
+  free (vertices);
+  
+  return sorted_vertices;
+}
 
 unsigned int scc::mark_partitions (rdg_p rdg)
 {
@@ -660,6 +699,69 @@ void scc::create_edges (rdg_p rdg)
 
 }
 
+/* Creates an edge with a data dependence vector.  */
+
+update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
+                      unsigned int index_of_edge)
+{
+  Instruction *a;
+  Instruction *b;
+  rdg_edge_p edge = RDG_EDGE (rdg, index_of_edge);
+  rdg_vertex_p va;
+  rdg_vertex_p vb;
+  
+
+  /* Invert data references according to the direction of the 
+     dependence.  */
+/*
+  if (DDR_REVERSE_P (ddr))
+    {
+      dra = DDR_B (ddr);
+      drb = DDR_A (ddr);
+    }
+  else
+    {
+      dra = DDR_A (ddr);
+      drb = DDR_B (ddr);
+    }
+*/
+
+  /* Locate the vertices containing the statements that contain
+     the data references.  */
+  va = find_vertex_with_stmt (rdg, a);
+  vb = find_vertex_with_stmt (rdg, b);
+//  gcc_assert (va && vb);
+
+  /* Update source and sink of the dependence.  */
+  RDGE_SOURCE (edge) = va;
+  RDGE_SINK (edge) = vb;
+//  RDGE_SOURCE_REF (edge) = DR_REF (dra);
+//  RDGE_SINK_REF (edge) = DR_REF (drb);
+  
+  /* Determines the type of the data dependence.  */
+/*
+  if (DR_IS_READ (dra) && DR_IS_READ (drb))
+    RDGE_TYPE (edge) = input_dd;
+  else if (!DR_IS_READ (dra) && !DR_IS_READ (drb))
+    RDGE_TYPE (edge) = output_dd;
+  else if (!DR_IS_READ (dra) && DR_IS_READ (drb))
+    RDGE_TYPE (edge) = flow_dd;
+  else if (DR_IS_READ (dra) && !DR_IS_READ (drb))
+    RDGE_TYPE (edge) = anti_dd;
+
+  RDGE_LEVEL (edge) = get_dependence_level (DDR_DIST_VECT (ddr, 
+                                                           index_of_vector), 
+					    DDR_NB_LOOPS (ddr));
+*/
+  RDGE_COLOR (edge) = 0;
+  RDGE_SCALAR_P (edge) = false;
+  
+//  VEC_safe_push (rdg_edge_p, heap, RDGV_OUT (va), edge);
+//  VEC_safe_push (rdg_edge_p, heap, RDGV_IN (vb), edge);
+  RDGV_OUT(va).push_back(edge);
+  RDGV_IN(vb).push_back(edge);
+}
+
 rdg_p scc::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
@@ -735,6 +837,8 @@ void scc::do_distribution (Loop *loop_nest)
     }
   
   dloops = topological_sort (sccg);
+
+  outscc = split_scc(dloops);
 
   if (dump_file)
     {
@@ -858,3 +962,9 @@ dump_rdg (FILE *outf, rdg_p rdg)
 
   fprintf (outf, "</dd_vertices>\n");
 }
+
+split_scc out_scc(std::vector <prdg_vertex_p> scc)
+{
+  return 0;
+}
+
