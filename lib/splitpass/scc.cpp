@@ -526,7 +526,7 @@ unsigned int scc::mark_partitions (rdg_p rdg)
     RDGV_PARTITIONS (RDG_VERTEX (rdg,i)).resize(0);
   
   /* If there are no dd_vertices, put all in one single partition.  */
-  if ((RDG_DDV (rdg)).size() == 0)
+  if ((RDG_DDV (rdg))->size() == 0)
     {
      /* Mark all vertices with p=1.  */
       for (i = 0; i < RDG_NBV (rdg); i++)
@@ -536,7 +536,7 @@ unsigned int scc::mark_partitions (rdg_p rdg)
     }
     
   /* Mark each vertex with its own color and propagate.  */
-  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg)).begin();it!=(RDG_DDV (rdg)).end();++it)
+  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg))->begin();it!=(RDG_DDV (rdg))->end();++it)
     {
 	rdg_v = *it;
      if ( (RDGV_PARTITIONS (rdg_v)).size() == 0)
@@ -762,7 +762,7 @@ rdg_p scc::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
   std::vector<ddr_p> *dep_r = new (std::vector<ddr_p>);
-  std::vector<rdg_vertex_p> dd_vertices;
+  std::vector<rdg_vertex_p> *dd_vertices = new (std::vector<rdg_vertex_p>);
   unsigned int i;
   rdg_vertex_p vertex;
   
@@ -799,8 +799,10 @@ rdg_p scc::build_rdg (Loop *loop_nest)
 
       if (RDGV_DD_P (vertex))
 //	VEC_safe_push (rdg_vertex_p, heap, RDG_DDV (rdg), vertex);
-        RDG_DDV (rdg).push_back(vertex);
+        dd_vertices->push_back(vertex);
     }
+
+   RDG_DDV(rdg) = dd_vertices;
 
   return rdg;
 }
@@ -954,7 +956,7 @@ scc::dump_rdg (FILE *outf, rdg_p rdg)
   fprintf (outf, "]]></graphviz>\n");
   fprintf (outf, "<dd_vertices>\n");
   
-  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg)).begin();it!=(RDG_DDV (rdg)).end();++it)
+  for (std::vector<rdg_vertex_p>::iterator it=(RDG_DDV (rdg))->begin();it!=(RDG_DDV (rdg))->end();++it)
     {
 	 vertex = *it;
       fprintf (outf, "<dd_vertex s=\"s%d\">", RDGV_N (vertex));
