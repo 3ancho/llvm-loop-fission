@@ -86,7 +86,7 @@ std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *de
   std::vector<ddr> ddr_0; 
   std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[loop_nest];
 //  for (mapit1 = dgOfLoops.begin(); mapit1 != dgOfLoops.end(); ++mapit1) {
-    int count = 0;
+//    int count = 0;
 //    std::map<Instruction*, std::set<Instruction*> > dg_temp = mapit1->seconnd;
     std::map<Instruction*, std::set<Instruction*> >::iterator mapit2;
     for (mapit2 = dg_temp.begin(); mapit2 != dg_temp.end(); ++mapit2) {
@@ -107,8 +107,8 @@ std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *de
 
 void scc::dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned int scc)
 {
-  unsigned int i;
-  prdg_edge_p e;
+//  unsigned int i;
+//  prdg_edge_p e;
   rdg_vertex_p rdg_v;
   
   PRDGV_COLOR (v) = VERTEX_GRAY;
@@ -148,7 +148,7 @@ void scc::dfs_rdgp_visit (prdg_p g, prdg_vertex_p v, unsigned int *t, unsigned i
 
 int scc::dfs_rdgp (prdg_p g)
 {
-  unsigned int i;
+//  unsigned int i;
   /* t represents the max of finishing times.  */
   unsigned int t = 0;
   prdg_vertex_p v;
@@ -176,7 +176,7 @@ bool scc::rdgp_vertex_less_than_p (const prdg_vertex_p a,
 
 unsigned int scc::scc_rdgp_1 (prdg_p g, int max_f)
 {
-  unsigned int i;
+//  unsigned int i;
   unsigned int t = 0;
   unsigned int scc = 0;
   prdg_vertex_p v;
@@ -223,7 +223,7 @@ unsigned int scc::scc_rdgp_1 (prdg_p g, int max_f)
 
 void scc::transpose_rdgp (prdg_p g)
 {
-  unsigned int i;
+//  unsigned int i;
   prdg_edge_p e;
   
   for (std::vector<prdg_edge_p>::iterator it=(PRDG_E (g)).begin();it!=(PRDG_E (g)).end(); ++it)
@@ -259,7 +259,7 @@ unsigned int scc::scc_rdgp (prdg_p g)
 
 bool scc::vertex_in_partition_p (rdg_vertex_p v, int p)
 {
-  int i;
+//  int i;
   int vp;
   
   for (std::vector<int>::iterator it=(RDGV_PARTITIONS (v)).begin();it!=(RDGV_PARTITIONS (v)).end(); ++it)
@@ -272,7 +272,7 @@ bool scc::vertex_in_partition_p (rdg_vertex_p v, int p)
 
 bool scc::vertex_in_scc_p (rdg_vertex_p v, int s)
 {
-  int i;
+//  int i;
   int vs;
   
   for (std::vector<int>::iterator it = (RDGV_SCCS (v)).begin(); it!=(RDGV_SCCS (v)).end(); ++it)
@@ -409,7 +409,7 @@ prdg_p scc::build_scc_graph (prdg_p g)
 bool scc::can_recompute_vertex_p (rdg_vertex_p v)
 {
   rdg_edge_p in_edge;
-  unsigned int i;
+//  unsigned int i;
   
   if (RDGV_DD_P (v))
     return false;
@@ -426,8 +426,9 @@ bool scc::can_recompute_vertex_p (rdg_vertex_p v)
 
 void scc::one_prdg (rdg_p rdg, rdg_vertex_p v, int p)
 {
-  rdg_edge_p o_edge, i_edge;
-  unsigned int i;
+  rdg_edge_p o_edge = NULL;
+  rdg_edge_p i_edge = NULL;
+//  unsigned int i;
   
   if (vertex_in_partition_p (v, p))
     return;
@@ -470,7 +471,7 @@ bool scc::correct_partitions_p (rdg_p rdg, int p)
 }
 
 std::vector <prdg_vertex_p>
-topological_sort (prdg_p g)
+scc::topological_sort (prdg_p g)
 {
   unsigned int max_f, i;
   prdg_vertex_p *vertices;
