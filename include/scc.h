@@ -89,7 +89,7 @@ typedef struct prdg_edge *prdg_edge_p;
 typedef struct data_dependence_relation ddr;
 typedef struct data_dependence_relation *ddr_p;
 
-typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > split_scc;
+typedef std::map<llvm::Loop*, std::vector<std::vector<llvm::Instruction*> > > split_scc;
 
 namespace llvm {
 /////////////// data structure ////////////////
@@ -241,7 +241,7 @@ struct prdg_edge
     AliasAnalysis *AA;
     Function *F;
     DependenceAnalysis *DA;
-    LoopInfo *LI;
+//    LoopInfo *LI;
 
 /////////////////////functions to generate scc///////////////////
 std::vector<ddr> compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap);
@@ -327,6 +327,7 @@ split_scc outscc;
     scc() : FunctionPass(ID) {};
     bool runOnFunction(Function &F);
     void getAnalysisUsage(AnalysisUsage &) const;
+    void outputSCC(Loop *L);
     LoopInfo *LI;
     DG *depmap;
   }; // class scc

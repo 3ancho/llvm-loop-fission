@@ -24,7 +24,7 @@ using namespace llvm;
 char scc::ID = 0;
 static RegisterPass<scc> X("scc", "scc Pass", false, false);
 ////////////public implementation //////////////////////
-virtual void scc::outputSCC(Loop *L) {
+void scc::outputSCC(Loop *L) {
 	
       std::vector<Loop*> subLoops = L->getSubLoops();
 	  if (subLoops.empty()) { // analysis only applies to innermost loops, so check for that
@@ -62,7 +62,7 @@ virtual void scc::outputSCC(Loop *L) {
 	}
 
 	}
-virtual bool scc:: runOnFunction(Function &F) {
+bool scc:: runOnFunction(Function &F) {
 	  LI = &getAnalysis<LoopInfo>();
 	  depmap = &getAnalysis<DG>();
 	  Loop *curLoop;
@@ -84,7 +84,7 @@ void scc::getAnalysisUsage(AnalysisUsage &AU) const {
 std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *depmap)
 {
   std::vector<ddr> ddr_0; 
-  std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLooops = depmap->dgOfLoops[loop_nest];
+  std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLoops = depmap->dgOfLoops[loop_nest];
   for (mapit1 = dgOfLoops.begin(); mapit1 != dgOfLoops.end(); ++mapit1) {
     int count = 0;
     std::map<Instruction*, std::set<Instruction*> > dg_temp = mapit1->seconnd;
@@ -97,7 +97,7 @@ std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *de
         ddr s;
         s.a = inst;
         s.b = setit;
-        ddr_0.pushback(s); 
+        ddr_0.push_back(s); 
       }
     }
   }
