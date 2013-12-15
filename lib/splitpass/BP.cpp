@@ -19,12 +19,12 @@ void BP::OutputBP(Loop *L) {
         errs() << "scc: No analysis found\n";
       } else {
 //        std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[L];
-              inst_map_set dg_instr_map = depmap->dgOfLoops[L];
+        inst_map_set dg_instr_map = depmap->dgOfLoops[L];
         if (dg_instr_map.empty()) {
           errs() << "Hello: Dependence graph is empty\n";
         } else {
 	////////////NOTICE//////////
-          build_partition(L,dg_instr_map); 
+          Partitions.insert(std::pair<Loop*, inst_vec_vec> (L, build_partition(L, dg_instr_map))); 
         }
       }
     } else {
@@ -32,9 +32,7 @@ void BP::OutputBP(Loop *L) {
         OutputBP(*it);
       }
 	}
-
 }
-
 
 bool BP:: runOnFunction(Function &F) {
 	  LI = &getAnalysis<LoopInfo>();
@@ -54,29 +52,32 @@ void BP::getAnalysisUsage(AnalysisUsage &AU) const {
       AU.addRequired<DG>();
     }
 
-
-void BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
+inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
   int NumOfNode = depmap->numOfNodes[CurL];
-  std::vector<inst_visit> visit_flag;
+//  std::vector<inst_visit> visit_flag;
   inst_set all_insts;
-
   inst_visit tmp_vf;
+  inst_visit *visited = &tmp_vf;
   inst_map_set::iterator it;
-  for(it=CurInstMapSet.begin();it!=CurInstMapSet.end();++it){
+  inst_vec_vec partition;
+   
+  //initialization
+  for(it = CurInstMapSet.begin(); it != CurInstMapSet.end(); ++it){
     Instruction* curInstr = it->first;
-    tmp_vf->first = curInstr;
-    tmp_vf->second = false;
-    visit_flag.push_back(tmp_vf);
+    tmp_vf.insert (std::pair<Instruction*, bool> (curInstr, false));
     all_insts.insert(curInstr);
   }
 
-  int idx=0;
-  for(it=CurInstMapSet.begin();it!=CurInstMapSet.end();++it,idx++){
+  //recursive dfs
+  int idx = 0;
+  for(it = CurInstMapSet.begin(); it ! = CurInstMapSet.end(); ++it, idx++){
     Instruction* curInstr = it->first;
-    tmp_vf = visit_flag.at(idx);
-    if(tmp_vf->second) continue;
-    dfs(curInstr, CurInstMapSet, all_insts, &visit_flag);
-  }  
+    if(tmp_vf[curInstr]) continue;
+    partition.push_back = dfs(curInstr, CurInstMapSet, all_insts, visited);
+  } 
+  
+  return partition;
+}
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
   inst_vec group;

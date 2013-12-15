@@ -37,6 +37,7 @@ typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
     LoopInfo *LI;
     DG *depmap;
   
+//////functions/////
     inst_vec dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited);
     void build_partition(Loop *CurL, inst_map_set CurInstMapSet);
 
@@ -49,7 +50,7 @@ typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
     void getAnalysisUsage(AnalysisUsage &) const;
     void OutputBP(Loop *L);
     void dumpBP(Loop *L);
-	
+
 };
 
 }//end llvm namespace
