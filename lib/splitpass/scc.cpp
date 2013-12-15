@@ -762,7 +762,7 @@ rdg_p scc::build_rdg (Loop *loop_nest)
 {
   rdg_p rdg;
   std::vector<ddr_p> *dep_r = new (std::vector<ddr_p>);
-  std::vector<rdg_vertex_p> dd_vertices;
+  std::vector<rdg_vertex_p> *dd_vertices = new (std::vector<rdg_vertex_p>);
   unsigned int i;
   rdg_vertex_p vertex;
   
@@ -799,8 +799,14 @@ rdg_p scc::build_rdg (Loop *loop_nest)
 
       if (RDGV_DD_P (vertex))
 //	VEC_safe_push (rdg_vertex_p, heap, RDG_DDV (rdg), vertex);
+
         (RDG_DDV (rdg))->push_back(vertex);
+
+        dd_vertices->push_back(vertex);
+
     }
+
+   RDG_DDV(rdg) = dd_vertices;
 
   return rdg;
 }
