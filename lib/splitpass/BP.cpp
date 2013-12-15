@@ -24,7 +24,8 @@ void BP::OutputBP(Loop *L) {
           errs() << "Hello: Dependence graph is empty\n";
         } else {
 	////////////NOTICE//////////
-          Partitions.insert(std::pair<Loop*, inst_vec_vec> (L, build_partition(L, dg_instr_map))); 
+          Partitions[L] = build_partition(L, dg_instr_map); 
+//          Partitions.insert(std::pair<Loop*, inst_vec_vec> (L, build_partition(L, dg_instr_map))); 
         }
       }
     } else {
@@ -34,7 +35,7 @@ void BP::OutputBP(Loop *L) {
 	}
 }
 
-bool BP:: runOnFunction(Function &F) {
+bool BP::runOnFunction(Function &F) {
 	  LI = &getAnalysis<LoopInfo>();
 	  depmap = &getAnalysis<DG>();
 	  Loop *curLoop;
@@ -53,13 +54,13 @@ void BP::getAnalysisUsage(AnalysisUsage &AU) const {
     }
 
 inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
-  int NumOfNode = depmap->numOfNodes[CurL];
+//  int NumOfNode = depmap->numOfNodes[CurL];
 //  std::vector<inst_visit> visit_flag;
   inst_set all_insts;
   inst_visit tmp_vf;
   inst_visit *visited = &tmp_vf;
-  inst_map_set::iterator it;
   inst_vec_vec partition;
+  std::map<Instruction*, std::set<Instruction*> >::iterator it, idx;
    
   //initialization
   for(it = CurInstMapSet.begin(); it != CurInstMapSet.end(); ++it){
@@ -68,35 +69,37 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     all_insts.insert(curInstr);
   }
   
-  std::vector<std::vector<Instruction*> > CurLoopScc;
-
   //recursive dfs
-  int idx = 0;
-  for(it = CurInstMapSet.begin(); it ! = CurInstMapSet.end(); ++it, idx++){
-    Instruction* curInstr = it->first;
+  for(idx = CurInstMapSet.begin(); idx != CurInstMapSet.end(); ++idx){
+    Instruction* curInstr = idx->first;
     if(tmp_vf[curInstr]) continue;
-    partition.push_back = dfs(curInstr, CurInstMapSet, all_insts, visited);
+    partition.push_back(dfs(curInstr, CurInstMapSet, all_insts, visited));
   } 
   
   return partition;
+}
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
   inst_vec group;
   inst_set dep_insts = dg_of_loop[start_inst];  //all insts that start_inst related to
+  inst_set::iterator it;
   group.push_back(start_inst);
-  for (inst_set::iterator it = dep_insts.begin(); it != dep_insts.end(); it++)
-    if (!(*visited)[it]) { // not visited
-      (*visited)[it] = True;
-      group.push_back(inst_vec(it, dg_of_loop, all_insts, *visited));
+  for (it = dep_insts.begin(); it != dep_insts.end(); it++){
+    Instruction *inst = *it;
+    if (!(*visited)[inst]) { // not visited
+      (*visited)[inst] = true;
+      inst_vec new_insts = dfs(inst, dg_of_loop, all_insts, visited);
+      group.insert(group.end(), new_insts.begin(), new_insts.end());
     }
+  }
   return group;
 } 
 
-void BP::dumpBP(*Loop L){
+void BP::dumpBP(Loop *L){
   inst_vec_vec sccs = Partitions[L];
-  for (int i = sccs.begin(); i < sccs.end(); i++){
+  for (unsigned int i = 0; i < sccs.size(); i++){
     errs() << "scc No. :" << i << "\n";
-    for (int j = sccs[i].begin(); j < sccs[i].end(); j++)
-      errs() << sccs[i] << "\n";
+    for (unsigned int j =0; j < sccs[i].size(); j++)
+      errs() << *sccs[i][j] << "\n";
   }
 }
