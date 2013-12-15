@@ -96,7 +96,7 @@ std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *de
       for (setit = set_temp.begin(); setit != set_temp.end(); ++setit) {
         ddr s;
         s.a = inst;
-        s.b = setit;
+        s.b = *setit;
         ddr_0.push_back(s); 
       }
     }
