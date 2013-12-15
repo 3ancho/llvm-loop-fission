@@ -89,7 +89,7 @@ std::vector<ddr> scc::compute_data_dependences_for_loop (Loop *loop_nest, DG *de
     int count = 0;
 //    std::map<Instruction*, std::set<Instruction*> > dg_temp = mapit1->seconnd;
     std::map<Instruction*, std::set<Instruction*> >::iterator mapit2;
-    for (mapit2 = dg_temp.begin; mapit2 != dg_temp.end(); ++mapit2) {
+    for (mapit2 = dg_temp.begin(); mapit2 != dg_temp.end(); ++mapit2) {
       Instruction *inst = mapit2->first;
       std::set<Instruction*> set_temp = mapit2->second;
       std::set<Instruction*>::iterator setit;

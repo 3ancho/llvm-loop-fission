@@ -78,7 +78,8 @@
 #define PRDGE_SINK(V)      (V)->sink
 #define PRDGE_RDG_EDGE(V)  (V)->rdg_edge
 
-
+namespace llvm {
+/////////////// data structure ////////////////
 typedef struct rdg *rdg_p;
 typedef struct rdg_vertex *rdg_vertex_p;
 typedef struct rdg_edge *rdg_edge_p;
@@ -91,8 +92,6 @@ typedef struct data_dependence_relation *ddr_p;
 
 typedef std::map<llvm::Loop*, std::vector<std::vector<llvm::Instruction*> > > split_scc;
 
-namespace llvm {
-/////////////// data structure ////////////////
 struct rdg 
 {
 
@@ -228,13 +227,13 @@ struct prdg_edge
   rdg_edge_p rdg_edge;
 };
 
+
 ////////////END data structure/////////////////
 
   class AliasAnalysis;
   class DependenceAnalysis;
   class Value;
   class raw_ostream;
-  class scc;
   
   class scc : public FunctionPass {
   private:
