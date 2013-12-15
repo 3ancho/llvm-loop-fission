@@ -643,26 +643,26 @@ void scc::create_vertices (rdg_p rdg)
   RDG_NBV (rdg) = number_of_vertices (rdg,depmap);
   
   vertex_index = 0;
-  llvm::BasicBlock * bb = loop_nest->getBlocks();
-//////////////////NOTICE/////////getBody!  
-//  for (i = 0; i < (loop_nest->getNumBlocks()); i++)
-//    {
-//      bb = bbs[i];
+  std::vector<BasicBlock*> bb = loop_nest->getBlocks();
+  BasicBlock* bb_p;
+  for (i = 0; i < (loop_nest->getNumBlocks()); i++)
+    {
+      bb_p = bb[i];
     
-      for (bsi = bb->begin(); bsi!= bb->end(); ++bsi)
+      for (bsi = bb_p->begin(); bsi!= bb_p->end(); ++bsi)
         {
 //	  Instruction instrs = *bsi;
 
               rdg_vertex_p v = RDG_VERTEX (rdg, vertex_index);
-              RDGV_INSTRS (v) = *bsi;
+              RDGV_INSTRS (v) = bsi;
               RDGV_N (v) = vertex_index;
               RDGV_BB (v) = i;
               RDGV_COLOR (v) = 0;
-              RDGV_DD_P (v) = contains_dr_p (instrs, RDG_DDR (rdg));
+              RDGV_DD_P (v) = contains_dr_p (bsi, RDG_DDR (rdg));
               vertex_index++;
 
         }
-//    }
+    }
 }
 
 void scc::create_edges (rdg_p rdg)
@@ -689,7 +689,7 @@ void scc::create_edges (rdg_p rdg)
   /* Create data edges.  */
   edge_index = 0;
  
-  for (int iter = 0; iter < ddrp.size(); ++iter){
+  for (int iter = 0; iter < ddrp->size(); ++iter){
    update_edge_with_ddv(ddrp, ddrp[iter], rdg, edge_index++); 
   }
 
@@ -697,11 +697,7 @@ void scc::create_edges (rdg_p rdg)
 
 /* Creates an edge with a data dependence vector.  */
 
-<<<<<<< HEAD
 void scc::update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
-=======
-void update_edge_with_ddv (ddr_p ddrp, ddr ddr0, rdg_p rdg,
->>>>>>> c7e9161ab15651689b16403b744f82b132620e97
                       unsigned int index_of_edge)
 {
   Instruction *a;
