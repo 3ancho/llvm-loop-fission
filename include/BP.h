@@ -21,6 +21,8 @@ typedef std::vector<Instruction*> inst_vec;
 typedef std::set<Instruction*> inst_set;
 typedef std::map<Instruction*, bool> inst_visit;
 typedef std::map<Instruction*, std::set<Instruction*> > inst_map_set;
+typedef std::vector<std::vector<Instruction*> inst_vec_vec;
+typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
 
   class AliasAnalysis;
   class DependenceAnalysis;
@@ -35,17 +37,18 @@ typedef std::map<Instruction*, std::set<Instruction*> > inst_map_set;
     LoopInfo *LI;
     DG *depmap;
   
-    void dfs();
+    inst_vec dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited);
     void build_partition(Loop *CurL, inst_map_set CurInstMapSet);
 
     std::map<Loop*, int> NumOfPartitions;
-    std::map<Loop*, std::vector<Instruction*> >	Partitions; 
+    loop_sccs	Partitions; 
 
     static char ID; 
     scc() : FunctionPass(ID) {};
     bool runOnFunction(Function &F);
     void getAnalysisUsage(AnalysisUsage &) const;
     void OutputBP(Loop *L);
+    void dumpBP(Loop *L);
 	
 };
 

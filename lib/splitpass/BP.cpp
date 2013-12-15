@@ -78,4 +78,23 @@ void BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     dfs(curInstr, CurInstMapSet, all_insts, &visit_flag);
   }  
 
+inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
+  inst_vec group;
+  inst_set dep_insts = dg_of_loop[start_inst];  //all insts that start_inst related to
+  group.push_back(start_inst);
+  for (inst_set::iterator it = dep_insts.begin(); it != dep_insts.end(); it++)
+    if (!(*visited)[it]) { // not visited
+      (*visited)[it] = True;
+      group.push_back(inst_vec(it, dg_of_loop, all_insts, *visited));
+    }
+  return group;
+} 
+
+void BP::dumpBP(*Loop L){
+  inst_vec_vec sccs = Partitions[L];
+  for (int i = sccs.begin(); i < sccs.end(); i++){
+    errs() << "scc No. :" << i << "\n";
+    for (int j = sccs[i].begin(); j < sccs[i].end(); j++)
+      errs() << sccs[i] << "\n";
+  }
 }
