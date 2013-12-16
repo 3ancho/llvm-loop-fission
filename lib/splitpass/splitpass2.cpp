@@ -50,7 +50,7 @@ namespace {
 
             
             // clone the given loop, L 
-            Loop *CreateOneLoop(Loop *L);
+            Loop *CreateOneLoop(Loop *L, std::map<Instruction*, Instruction*> &instMap);
     };
 }
 
@@ -62,7 +62,7 @@ static RegisterPass<SplitPass2> X("splitpass2", "loop fission project",
 
 
 // CreateOneLoop should take the current Loop 
-Loop * SplitPass2::CreateOneLoop(Loop *L) {
+Loop * SplitPass2::CreateOneLoop(Loop *L, std::map<Instruction*, Instruction*>  &instMap) {
     DEBUG(dbgs() << "Running CreateOneLoop\n");
     // TODO check if only one exit block.
     // TODO check if save to clone.
@@ -80,6 +80,20 @@ Loop * SplitPass2::CreateOneLoop(Loop *L) {
         BasicBlock *New = CloneBasicBlock(*it, VMap, ".copied");
         Header->getParent()->getBasicBlockList().push_back(New);
         new_body.push_back(New);
+
+        // add to instMap
+        std::vector<Instruction *> new_insts;
+        for (BasicBlock::iterator I = New->begin(); I != New->end(); ++I) {
+            new_insts.push_back(I);
+        }
+        std::vector<Instruction *> old_insts;
+        for (BasicBlock::iterator I = (*it)->begin(); I != (*it)->end(); ++I) {
+            old_insts.push_back(I);
+        }
+
+        for (unsigned i=0; i< new_insts.size(); ++i) {
+            instMap[new_insts[i]] = old_insts[i];
+        }
 
         // Update our running map of newest clones
         LastValueMap[*it] = New;
@@ -191,41 +205,91 @@ bool SplitPass2::runOnFunction(Function &F) {
         // scc
         std::vector<std::vector<Instruction*> > sccs = bpmap->Partitions[L];
         std::vector<Loop*> loops; 
+        std::vector<std::map<Instruction*, Instruction*> > loops_map;
 
-        unsigned sccs_size = sccs.size(); 
+        unsigned sccs_size = sccs.size()-2; 
+        if (sccs_size == 1) continue;
+
         DEBUG(dbgs() << " SSC count: " << sccs_size <<" \n" );
-        //// split
 
-        for (unsigned i=0; i<sccs_size; ++i) {
-            Loop* lp = CreateOneLoop(L);
+        // split 
+
+        loops.push_back(L);
+        std::map<Instruction*, Instruction*> temp_map;
+        // copy sccs_size - 1 times, we will use original loop 
+        for (unsigned i=0; i<sccs_size-1; ++i) {
+            temp_map.clear();
+            Loop* lp = CreateOneLoop(L, temp_map);
             if (lp) {
                 LI->addTopLevelLoop(lp); 
+
                 loops.push_back(lp);
+                loops_map.push_back(temp_map);
             }
         }
+
+
+
+        DEBUG(dbgs() << " copy done\n" );
+        DEBUG(dbgs() << " loops_Map size " << loops_map.size() << "\n" );
+        DEBUG(dbgs() << " loops_Map[1] size " << loops_map[1].size() << "\n" );
+//        for( std::map<Instruction*, Instruction*>::iterator iterator = loops_map[1].begin(); iterator != loops_map[1].end(); iterator++) {
+//            iterator->first->dump();
+//            DEBUG(dbgs() << " ----  \n" );
+//            iterator->second->dump();
+//            // Repeat if you also want to iterate through the second map.
+//        }
         
         std::vector< BasicBlock * > body;
         BasicBlock * Head;
         BasicBlock * Latch;
 
+        Instruction * tempInst;
+      
+        // start form index 1 because original loop(scc) is processed
         for (unsigned i=0; i<sccs_size; ++i) {
+            DEBUG(dbgs() << " scc NO. " << i << " Started \n" );
             body = loops[i]->getBlocks();
             Head = loops[i]->getHeader();
             Latch = loops[i]->getLoopLatch();
-            for(unsigned body_i=0; i<body.size(); ++body_i) {
+
+            // loop throught BBs in this loop
+            for(int body_i=body.size()-1; body_i>=0; --body_i) {
                 if (body[body_i] == Head) continue; // skip header and latch insts
-                for (BasicBlock::iterator BBI = body[body_i]->begin(), BBIE = --(--body[body_i]->end()); 
-                        BBI != BBIE; ++BBI)  
-                {
+
+
+                BasicBlock::iterator BBI = body[body_i]->begin(); 
+                BasicBlock::iterator BBIE = body[body_i]->end();
+                if (body_i == body.size()-1) {
+                    // Latch block
+                    BBIE--;    
+                    BBIE--;    
+                }
+
+                std::vector<Instruction *> insts;
+                for ( ; BBI != BBIE; ++BBI)  {
+                    insts.push_back(BBI);
+                }
+                for (int j=insts.size()-1; j>=0; --j) {
                     // if sccs[i] doens't have this inst, remove it from loop[i]
-                    if (!scc_contains(sccs[i], BBI)) {
-                        BBI->eraseFromParent();
+                    if (i>0) {
+                        // if i > 0
+                        tempInst = loops_map[i-1][insts[j]];
+                    } else {
+                        // if i == 0
+                        tempInst = insts[j];
+                    }
+                    if (!scc_contains(sccs[i], tempInst)) {
+                        DEBUG(dbgs() << " scc NO. " << i << " erasing \n" );
+                        tempInst->dump();
+                        insts[j]->eraseFromParent();
                     }
                 }
             }
+            DEBUG(dbgs() << " scc NO. " << i << " Finished -------  \n" );
+
         }
     }
-
 
     loopnum = 0;
     for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
@@ -239,7 +303,7 @@ bool SplitPass2::scc_contains(std::vector<Instruction*> &list, Instruction *Inst
     for(std::vector<Instruction*>::iterator it = list.begin(); it != list.end(); ++it) {
         if (*it == Inst) {
             return true;
-        }    
+        } 
     }
     return false;
 }
