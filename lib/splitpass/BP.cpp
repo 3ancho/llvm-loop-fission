@@ -144,7 +144,7 @@ void BP::dumpBP(Loop *L){
 
 inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   inst_vec_vec new_sec;
-  int scc_no = old_scc.size(); 
+  int scc_no = old_scc.size()-2; // subtract the last two :inc br 
   int all_scc_no = pow(2, (scc_no-1));
   int *size = new int[scc_no];   // no_inst for sccs
   double *Scores = new double[all_scc_no];
@@ -155,8 +155,7 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
 
   int min = 0;
   double min_score = 0;
-  int best_scc;
-  int i;
+
   /*
     sequence of iterating all possible sccs:
     suppose we have scc_no of 5, which means scc 0, 1, 2, 3, and 4.
@@ -265,6 +264,17 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   delete[] pCut;
 ///////////// END Form the new partition plan with minimum penalty ///////////
 
+///////////// Add back the last two instrs//////////
+  int last=old_scc.size()-2;
+  tmp.clear();
+  for(unsigned long j=0;j<old_scc[last].size();j++){tmp.push_back(old_scc[last].at(j));}
+  new_sec.push_back(tmp);
+
+  last=old_scc.size()-1;
+  tmp.clear();
+  for(unsigned long j=0;j<old_scc[last].size();j++){tmp.push_back(old_scc[last].at(j));}
+  new_sec.push_back(tmp);  
+
 delete[] IcacheScore; ///////////IcacheScore delete here!
 delete[] iterationScore; 
 delete[] extrainstScore;
@@ -274,7 +284,7 @@ delete[] Scores;      ///////////score delete here!
   return new_sec;
 } 
 
-int NumHeaderInst(Loop *L)
+int BP::NumHeaderInst(Loop *L)
 {
  BasicBlock *HB = L->getHeader(); //Header Block
  int HeaderInstrCnt=0;
