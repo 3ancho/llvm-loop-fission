@@ -1,5 +1,5 @@
 #!/bin/bash
-file=loop1
+file=loop8
 input=10
 clang -c -emit-llvm $file.c -o $file.bc
 opt -indvars -instcombine -loop-simplify -simplifycfg -mem2reg $file.bc > $file.simple.bc
