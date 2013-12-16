@@ -14,21 +14,24 @@ void BP::OutputBP(Loop *L) {
 	
       std::vector<Loop*> subLoops = L->getSubLoops();
 	  if (subLoops.empty()) { // analysis only applies to innermost loops, so check for that
-      errs() << "scc: printing the data from DG pass for ";
+      errs() << "BP: printing the data from DG pass for ";
       errs() <<*L << '\n';
       if (depmap->dgOfLoops.count(L) == 0) {
-        errs() << "scc: No analysis found\n";
+        errs() << "BP: No analysis found\n";
       } else {
-//        std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[L];
         inst_map_set dg_instr_map = depmap->dgOfLoops[L];
+        inst_map_set dg_mem_map = depmap->dgOfLoopsMem[L];
         if (dg_instr_map.empty()) {
-          errs() << "Hello: Dependence graph is empty\n";
+          errs() << "BP: Dependence graph is empty\n";
         } else {
-	////////////NOTICE//////////
-          inst_map_set inst_map = dual_dg_map(dg_instr_map);
-          Partitions[L] = build_partition(L, inst_map); 
+//          if (depmap->ifLoopDist[L]){ // split
+            inst_map_set inst_map = dual_dg_map(dg_instr_map);
+            inst_vec_vec prdg = build_partition(L, inst_map); 
+            Partitions[L] = build_scc(L, dg_mem_map, prdg); 
+//          }
+//          else
+//            Partitions[L] = convert(L); // keep all info, just convert data structure to loop_sccs and get rid of the last two instructions (%inc and br)
           dumpBP(L);
-//          Partitions.insert(std::pair<Loop*, inst_vec_vec> (L, build_partition(L, dg_instr_map))); 
         }
       }
     } else {
@@ -95,12 +98,90 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     if(tmp_vf[curInstr]) continue;
     partition.push_back(dfs(curInstr, CurInstMapSet, all_insts, visited));
   } 
-  
+ 
+  return partition; 
+}
+
+inst_pair_set BP::find_dual(inst_map_set dg_mem_map){
+  inst_pair_set duals;            //final result
+  inst_map_set::iterator it, it1;
+  inst_set::iterator idx0, idx1;
+  for(it = dg_mem_map.begin(); it != dg_mem_map.end(); it++){ //iterate every inst in mem_map
+    Instruction* first_inst = it->first;  
+    inst_set first_set = it->second;    //set for that instruction
+    for(idx0 = first_set.begin(); idx0 != first_set.end(); idx0++){
+      Instruction* second_inst = *idx0;
+      it1 = dg_mem_map.find(second_inst);  //find the instruction being checked in map
+      if (it1 == dg_mem_map.end())
+        continue;
+      else
+        inst_set second_set = it1->second;  //set of the checked instruction
+      if (second_set.find(first_inst) != second_set.end) {  //found the first inst in the set of the checked instruction: that's a dual link
+        duals.insert(std::make_pair(first_inst, second_inst));
+        continue;
+      }
+    }
+  }
+  return duals;
+}
+
+inst_vec_vec BP::build_scc(Loop *CurL, inst_pair_set dg_mem, inst_vec_vec prdg){
+  inst_vec_vec scc = prdg;  //result
+  inst_vec vec0, vec1;
+  inst_pair_set::iterator it;
+  inst_vec_vec::iterator idx0, idx1;
+  std::set<std::set<inst_vec> > sets_of_merged_vecs;
+  for(it = dg_mem.begin(); it != dg_mem.end(); it++){   //iterate pairs
+    inst_pair pair = *it;
+// find dual vertex
+    for(idx0 = prdg.begin(); idx0 != prdg.end(); idx0++){   //iterate prdg
+      inst_vec vec0 = *idx0;
+      if (vec0.find(pair->first) != vec0.end()) { 
+    //dual mem_dep in this vec(scc), find the second and record to merge
+        for(idx1 = prdg.begin(); idx1 != prdg.end(); idx1++){ //iterate prdg
+          inst_vec vec1 = *idx1;
+          if (vec1.find(pair->second) != vec1.end()) {  //in this scc
+            std::set<std::set<inst_vec> >::iterator set_iter;
+            for (set_iter = sets_of_merged_vecs.begin(); set_iter != sets_of_merged_vecs.end(); set_iter++) {
+              vec0.set = *set_iter.find(vec0); 
+              if (set_iter->find(vec0) != set_iter.end()){  //if vec0 already has a dual link to others
+                vec0.set->insert(vec1);
+                continue;
+              }
+              vec1.set = *set_iter.find(vec1); 
+              if (set_iter->find(vec1) != set_iter.end()){  //if vec1 already has a dual link to others
+                vec0.set->insert(vec0);
+                continue;
+              }
+              std::set<inst_vec> merged_vecs;               // it's a new set 
+              merged_vecs.insert(vec0);
+              merged_vecs.insert(vec1);
+              sets_of_merged_vecs.insert(merged_vecs);
+          }
+        }
+      break;
+      }
+    }
+  }
+
+  //merge
+  std::set<std::set<inst_vec> >::iterator set_iter;
+  for (set_iter = sets_of_merged_vecs.begin(); set_iter != sets_of_merged_vecs.end(); set_iter++) {
+    std::set<inst_vec> merged_vecs = *set_iter; 
+    std::set<std::set<inst_vec> >::iterator idx;
+    inst_vec new_vec;
+    for (idx = merged_vecs.begin(); idx != merged_vecs.end(); idx++) {
+      new_vec.insert(*idx);     //merge the vccs
+      prdg.remove(new_vec);     //remove the original separated vccs
+    }
+    prdg.insert(new_vec);       //add the merged vcc
+  }
+
   // apply heurstics
   if (HEURSTICS)
-    return check_partition(partition, CurL);
+    return check_partition(scc, CurL);
   else 
-    return partition;
+    return scc;
 }
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
@@ -144,7 +225,7 @@ void BP::dumpBP(Loop *L){
 
 inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   inst_vec_vec new_sec;
-  int scc_no = old_scc.size()-2; // subtract the last two :inc br 
+  int scc_no = old_scc.size(); 
   int all_scc_no = pow(2, (scc_no-1));
   int *size = new int[scc_no];   // no_inst for sccs
   double *Scores = new double[all_scc_no];
@@ -153,10 +234,10 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   double *iterationScore=new double[all_scc_no]; //IcacheScore new here!
   double *extrainstScore=new double[all_scc_no]; //IcacheScore new here!
 
-  int min = 0;
-  double min_score = 0;
-
-
+  int max = 0;
+  double max_score = 0;
+  int best_scc;
+  int i;
   /*
     sequence of iterating all possible sccs:
     suppose we have scc_no of 5, which means scc 0, 1, 2, 3, and 4.
@@ -214,81 +295,35 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   }
 
   ///////////END calc Icahce score//////////// 
-
-  /////////iteration Score//////////////// 
-  for (int i = 0; i < all_scc_no; i++){
+ 
+  for (int i = 0; i < scc_no; i++){
     iterationScore[i] = 1.0 / NUM_OF_CORES;
   }
-  //////////END iteration score///////////
-  //////////////extrainstrScore////////////
-  for (int i = 0; i < all_scc_no; i++){
+
+  for (int i = 0; i < scc_no; i++){
     extrainstScore[i] = ParPlanSizeGroup.at(i).size() * NumHeaderInst(L);
   }
-  ///////////END extrainstrScore/////////////
 
-///////////////// find the min penalty partition plan //////////////
-
-  for (int i = 0; i < all_scc_no; i++){
+  for (int i = 0; i < scc_no; i++){
     Scores[i] = IcacheScore[i]*WEIGHT_CACHE + 
                 iterationScore[i]*WEIGHT_ITERATION + 
                 extrainstScore[i]*WEIGHT_INSTRUCTIONS; 
   }
 
-  min_score=Scores[0];
-  for (int i = 0; i < all_scc_no; i++)
-    if (min_score > Scores[i]) {
-      min = i;
-      min_score = Scores[i];
+  for (int i = 0; i < scc_no; i++)
+    if (max_score < Scores[i]) {
+      max = i;
+      max_score = Scores[i];
     }
-
-/////////////////END find the min penalty partition plan //////////////
-
-/////////////// Form the new partition plan with minimum penalty /////////////
-  int *pCut=new int[scc_cut_point];
-  int cur=min; 
-  for(int i=0;i<scc_cut_point;i++){
-    pCut[scc_cut_point-1-i]=cur>>(scc_cut_point-1-i);
-    cur-=(pCut[scc_cut_point-1-i])<<(scc_cut_point-1-i);
-  }
-
-    inst_vec tmp;
-    for(unsigned long j=0;j<old_scc[0].size();j++){tmp.push_back(old_scc[0].at(j));}
-    for(int p=0;p<scc_cut_point;p++){
-       if(!pCut[p]){for(unsigned long j=0;j<old_scc[p+1].size();j++){tmp.push_back(old_scc[p+1].at(j));}}
-       else{
-         new_sec.push_back(tmp);
-         tmp.clear();
-         for(unsigned long j=0;j<old_scc[p+1].size();j++){tmp.push_back(old_scc[p+1].at(j));}
-       }
-    }
-    new_sec.push_back(tmp);
-  delete[] pCut;
-///////////// END Form the new partition plan with minimum penalty ///////////
-
-///////////// Add back the last two instrs//////////
-  int last=old_scc.size()-2;
-  tmp.clear();
-  for(unsigned long j=0;j<old_scc[last].size();j++){tmp.push_back(old_scc[last].at(j));}
-  new_sec.push_back(tmp);
-
-  last=old_scc.size()-1;
-  tmp.clear();
-  for(unsigned long j=0;j<old_scc[last].size();j++){tmp.push_back(old_scc[last].at(j));}
-  new_sec.push_back(tmp);  
 
 delete[] IcacheScore; ///////////IcacheScore delete here!
-delete[] iterationScore; 
-delete[] extrainstScore;
 delete[] size;        //////////size delete here!
 delete[] Scores;      ///////////score delete here!
 
-  errs() << "debug";
-  errs() << new_sec.size() << "\n";
-  errs() << new_sec[0].size() << "\n";
-  return new_sec;
+//  return new_sec[i];
 } 
 
-int BP::NumHeaderInst(Loop *L)
+int NumHeaderInst(Loop *L)
 {
  BasicBlock *HB = L->getHeader(); //Header Block
  int HeaderInstrCnt=0;
