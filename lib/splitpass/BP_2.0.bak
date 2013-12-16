@@ -130,18 +130,21 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_pair_set dg_mem, inst_vec_vec prdg){
   inst_pair_set::iterator it;
   inst_vec_vec::iterator idx0, idx1;
   std::map<inst_vec_vec::iterator, inst_vec_vec::iterator> pairs;
-  for(it = dg_mem.begin(); it != dg_mem.end(); it++){
+  for(it = dg_mem.begin(); it != dg_mem.end(); it++){   //iterate pairs
     inst_pair pair = *it;
 // find dual vertex
-    for(idx0 = prdg.begin(); idx0 != prdg.end(); idx0++){
+    for(idx0 = prdg.begin(); idx0 != prdg.end(); idx0++){   //iterate prdg
       inst_vec vec0 = *idx0;
       if (vec0.find(pair->first)) { 
-    //dual mem_dep in this vertex, find second and record to merge
-        for(idx1 = prdg.begin(); idx1 != prdg.end(); idx1++){
+    //dual mem_dep in this vec(scc), find the second and record to merge
+        for(idx1 = prdg.begin(); idx1 != prdg.end(); idx1++){ //iterate prdg
           inst_vec vec1 = *idx1;
-          if (vec1.find(pair->second)) 
+          if (vec1.find(pair->second) != vec1.end()) {  //in this scc
             pairs[vec0] = vec1; 
+            break;
+          }
         }
+      break;
       }
     }
   }
@@ -163,11 +166,11 @@ inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_
   inst_set::iterator it;
   //checking if duplicate
   group.push_back(start_inst);
-  errs() << "start_inst: " << *start_inst << "\n";
+//  errs() << "start_inst: " << *start_inst << "\n";
   for (it = dep_insts.begin(); it != dep_insts.end(); it++){
     Instruction *inst = *it;
-    errs() << "visited_inst: " << *inst << "\t";
-    errs() << !(*visited)[inst] << "\n";
+//    errs() << "visited_inst: " << *inst << "\t";
+//    errs() << !(*visited)[inst] << "\n";
     if (!(*visited)[inst]) { // not visited
       (*visited)[inst] = true;
       inst_vec new_insts = dfs(inst, dg_of_loop, all_insts, visited);
@@ -175,7 +178,7 @@ inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_
       for (inst_vec::iterator iter0 = new_insts.begin(); iter0 != new_insts.end(); iter0++){
         for (inst_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
           if (*iter0 == *iter1){
-            errs() << "duplicate_inst: " << *iter0 << "\n";
+//            errs() << "duplicate_inst: " << *iter0 << "\n";
             new_insts.erase(iter0);
             break;
           }
