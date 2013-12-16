@@ -144,8 +144,11 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
   inst_vec_vec new_sec;
   int scc_no = old_scc.size(); 
   int all_scc_no = pow(2, (scc_no-1));
-  int *size = new (int[scc_no]);   // no_inst for sccs
-  double *scores = new (double[all_scc_no]);
+  int *size = new int[scc_no];   // no_inst for sccs
+  double *scores = new double[all_scc_no];
+
+  double *IcacheScore=new double[all_scc_no]; //IcacheScore new here!
+
   int max = 0;
   double max_score = 0;
   int best_scc;
@@ -163,13 +166,60 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
     size[i] = old_scc[i].size();
   
   // calculating scores
+  /////////////calc Icache score//////////////
+  int scc_cut_point = scc_no-1; //////////cut point = scc_no - 1
   
+  std::vector<std::vector<int> > ParPlanSizeGroup;
+ 
+  for(int idx=0;idx<all_scc_no;idx++){
+    int *pCut = new int[scc_cut_point];
+    int cur=idx;
+    for(int i=0;i<scc_cut_point;i++){
+    pCut[scc_cut_point-1-i]=cur>>(scc_cut_point-1-i);
+    cur-=(pCut[scc_cut_point-1-i])<<(scc_cut_point-1-i);
+    }
+
+    std::vector<int> CurSizeGroup;   
+    int cursize=size[0];
+    for(int p=0;p<scc_cut_point;p++)
+    {
+     if(!pCut[p]){cursize+=size[p+1];}
+     else{
+            CurSizeGroup.push_back(cursize);
+            cursize=size[p+1];
+     }
+    }
+    CurSizeGroup.push_back(cursize);
+    delete[] pCut;
+    ParPlanSizeGroup.push_back(CurSizeGroup);
+  }
+
+  for(unsigned long i=0;i<ParPlanSizeGroup.size();i++){
+     double tmpPS = 0.0;
+     double maxPS = 0.0;
+     double sumPS = 0.0;
+    for(unsigned long j=0;j<(ParPlanSizeGroup.at(i)).size();j++){
+       double cursize = (double)((ParPlanSizeGroup.at(i)).at(j));
+       if(cursize<=I_CACHE_SIZE){tmpPS=((double)I_CACHE_SIZE-cursize);}
+       else{tmpPS=((cursize-(double)I_CACHE_SIZE)*((double)OVERFLOW_PENALTY));}
+       if(tmpPS>maxPS){maxPS=tmpPS;}      
+       sumPS += tmpPS;
+    }
+    double avgPS = sumPS/((ParPlanSizeGroup.at(i)).size());
+    *(IcacheScore+i)=(avgPS+maxPS)/2.0;
+  }
+
+  ///////////END calc Icahce score//////////// 
+ 
   for (int i = 0; i < scc_no; i++)
     if (max_score < scores[i]) {
       max = i;
       max_score = scores[i];
     }
 
+delete[] IcacheScore; ///////////IcacheScore delete here!
+delete[] size;        //////////size delete here!
+delete[] scores;      ///////////score delete here!
 //  return new_sec[i];
 } 
 
