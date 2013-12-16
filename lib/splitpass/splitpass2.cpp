@@ -281,13 +281,12 @@ bool SplitPass2::runOnFunction(Function &F) {
                     }
                     if (!scc_contains(sccs[i], tempInst)) {
                         DEBUG(dbgs() << " scc NO. " << i << " erasing \n" );
-                        tempInst->dump();
+                        insts[j]->dump();
                         insts[j]->eraseFromParent();
                     }
                 }
             }
             DEBUG(dbgs() << " scc NO. " << i << " Finished -------  \n" );
-
         }
     }
 
