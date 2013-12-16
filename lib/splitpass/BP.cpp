@@ -96,9 +96,9 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     partition.push_back(dfs(curInstr, CurInstMapSet, all_insts, visited));
   } 
   
-//  return partition;
+  return partition;
   // apply heurstics
-  return check_partition(partition);
+//  return check_partition(partition);
 }
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
@@ -163,7 +163,8 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
     size[i] = old_scc[i].size();
 } 
 
-double cache_score (int * sizes); 
+double cache_score (std::vector<int>); 
+
 
 int NumHeaderInst(Loop *L)
 {
