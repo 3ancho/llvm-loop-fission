@@ -81,11 +81,9 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
   inst_vec_vec partition;
   std::map<Instruction*, std::set<Instruction*> >::iterator it, idx;
    
-  errs() << "instructions" << "\n";
   //initialization
   for(it = CurInstMapSet.begin(); it != CurInstMapSet.end(); ++it){
     Instruction* curInstr = it->first;
-    errs() << *curInstr << "\n";
     tmp_vf.insert (std::pair<Instruction*, bool> (curInstr, false));
     all_insts.insert(curInstr);
   }
@@ -104,15 +102,26 @@ inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_
   inst_vec group;
   inst_set dep_insts = dg_of_loop[start_inst];  //all insts that start_inst related to
   inst_set::iterator it;
+  //checking if duplicate
   group.push_back(start_inst);
   errs() << "start_inst: " << *start_inst << "\n";
   for (it = dep_insts.begin(); it != dep_insts.end(); it++){
     Instruction *inst = *it;
-//    errs() << "visited_inst: " << *inst << "\t";
-//    errs() << !(*visited)[inst] << "\n";
+    errs() << "visited_inst: " << *inst << "\t";
+    errs() << !(*visited)[inst] << "\n";
     if (!(*visited)[inst]) { // not visited
       (*visited)[inst] = true;
       inst_vec new_insts = dfs(inst, dg_of_loop, all_insts, visited);
+      //remove duplicates
+      for (inst_vec::iterator iter0 = new_insts.begin(); iter0 != new_insts.end(); iter0++){
+        for (inst_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
+          if (*iter0 == *iter1){
+            errs() << "duplicate_inst: " << *iter0 << "\n";
+            new_insts.erase(iter0);
+            break;
+          }
+        }
+      }
       group.insert(group.end(), new_insts.begin(), new_insts.end());
     }
   }
