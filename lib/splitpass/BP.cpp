@@ -144,9 +144,8 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
   inst_vec_vec new_sec;
   int scc_no = old_scc.size(); 
   int all_scc_no = pow(2, scc_no);
-//  int *size = new (int) (sizeof(int)*scc_no);   // no_inst for sccs
-  int size[scc_no];   // no_inst for sccs
-  double scores[all_scc_no];
+  int *size = new (int[scc_no]);   // no_inst for sccs
+  double *scores = new (double[all_scc_no]);
   double max_score = 0;
   int best_scc;
   int i;
