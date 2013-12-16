@@ -13,6 +13,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "DG.h"
+#include "machine.h"
 #include <stdio.h>
 
 
@@ -41,6 +42,13 @@ typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
     inst_vec dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited);
     inst_vec_vec build_partition(Loop *CurL, inst_map_set CurInstMapSet);
     inst_map_set dual_dg_map(inst_map_set dg_inst_map);
+
+// for heuristics //
+    inst_vec_vec check_partition(inst_vec_vec old_scc);
+    double cache_score (int * sizes);
+    double parallel_score ();
+    double add_inst_score (int cuts, int loop_header_cnt);
+    int NumHeaderInst(Loop *L);
 
     std::map<Loop*, int> NumOfPartitions;
     loop_sccs	Partitions; 

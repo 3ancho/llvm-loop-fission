@@ -3,6 +3,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "BP.h"
+#include <cmath>
 
 using namespace llvm;
 
@@ -95,7 +96,9 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     partition.push_back(dfs(curInstr, CurInstMapSet, all_insts, visited));
   } 
   
-  return partition;
+//  return partition;
+  // apply heurstics
+  return check_partition(partition);
 }
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
@@ -137,3 +140,37 @@ void BP::dumpBP(Loop *L){
   }
 }
 
+inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
+  inst_vec_vec new_sec;
+  int scc_no = old_scc.size(); 
+  int all_scc_no = pow(2, scc_no);
+//  int *size = new (int) (sizeof(int)*scc_no);   // no_inst for sccs
+  int size[scc_no];   // no_inst for sccs
+  double scores[all_scc_no];
+  double max_score = 0;
+  int best_scc;
+  int i;
+  /*
+    sequence of iterating all possible sccs:
+    suppose we have scc_no of 5, which means scc 0, 1, 2, 3, and 4.
+    scc_no [0] = cut all (original);
+    scc_no [1->4] = merge 0->1, 1->2, ...
+    scc_no [5->10] = merge 0->1&1->2, 0->1&2->3, ...
+    scc_no [11->14] = merge 0->1&1->2&2->3, 0->1&1->2&3->4, ...
+    scc_no 15 = merge all
+  */
+  for (int i = 0; i < scc_no; i++)
+    size[i] = old_scc[i].size();
+} 
+
+double cache_score (int * sizes); 
+
+int NumHeaderInst(Loop *L)
+{
+ BasicBlock *HB = L->getHeader(); //Header Block
+ int HeaderInstrCnt=0;
+ for(BasicBlock::iterator it=HB->begin();it!=HB->end();++it)
+     HeaderInstrCnt++;
+ 
+ return HeaderInstrCnt; 
+}
