@@ -96,9 +96,11 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     partition.push_back(dfs(curInstr, CurInstMapSet, all_insts, visited));
   } 
   
-  return partition;
   // apply heurstics
-//  return check_partition(partition);
+  if (HEURSTICS)
+    return check_partition(partition, CurL);
+  else 
+    return partition;
 }
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
@@ -140,17 +142,19 @@ void BP::dumpBP(Loop *L){
   }
 }
 
-inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
+inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   inst_vec_vec new_sec;
   int scc_no = old_scc.size(); 
   int all_scc_no = pow(2, (scc_no-1));
   int *size = new int[scc_no];   // no_inst for sccs
-  double *scores = new double[all_scc_no];
+  double *Scores = new double[all_scc_no];
 
   double *IcacheScore=new double[all_scc_no]; //IcacheScore new here!
+  double *iterationScore=new double[all_scc_no]; //IcacheScore new here!
+  double *extrainstScore=new double[all_scc_no]; //IcacheScore new here!
 
-  int max = 0;
-  double max_score = 0;
+  int min = 0;
+  double min_score = 0;
   int best_scc;
   int i;
   /*
@@ -210,17 +214,64 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
   }
 
   ///////////END calc Icahce score//////////// 
- 
-  for (int i = 0; i < scc_no; i++)
-    if (max_score < scores[i]) {
-      max = i;
-      max_score = scores[i];
+
+  /////////iteration Score//////////////// 
+  for (int i = 0; i < all_scc_no; i++){
+    iterationScore[i] = 1.0 / NUM_OF_CORES;
+  }
+  //////////END iteration score///////////
+  //////////////extrainstrScore////////////
+  for (int i = 0; i < all_scc_no; i++){
+    extrainstScore[i] = ParPlanSizeGroup.at(i).size() * NumHeaderInst(L);
+  }
+  ///////////END extrainstrScore/////////////
+
+///////////////// find the min penalty partition plan //////////////
+
+  for (int i = 0; i < all_scc_no; i++){
+    Scores[i] = IcacheScore[i]*WEIGHT_CACHE + 
+                iterationScore[i]*WEIGHT_ITERATION + 
+                extrainstScore[i]*WEIGHT_INSTRUCTIONS; 
+  }
+
+  min_score=Scores[0];
+  for (int i = 0; i < all_scc_no; i++)
+    if (min_score > Scores[i]) {
+      min = i;
+      min_score = Scores[i];
     }
 
+/////////////////END find the min penalty partition plan //////////////
+
+/////////////// Form the new partition plan with minimum penalty /////////////
+  int *pCut=new int[scc_cut_point];
+  int cur=min; 
+  for(int i=0;i<scc_cut_point;i++){
+    pCut[scc_cut_point-1-i]=cur>>(scc_cut_point-1-i);
+    cur-=(pCut[scc_cut_point-1-i])<<(scc_cut_point-1-i);
+  }
+
+    inst_vec tmp;
+    for(unsigned long j=0;j<old_scc[0].size();j++){tmp.push_back(old_scc[0].at(j));}
+    for(int p=0;p<scc_cut_point;p++){
+       if(!pCut[p]){for(unsigned long j=0;j<old_scc[p+1].size();j++){tmp.push_back(old_scc[p+1].at(j));}}
+       else{
+         new_sec.push_back(tmp);
+         tmp.clear();
+         for(unsigned long j=0;j<old_scc[p+1].size();j++){tmp.push_back(old_scc[p+1].at(j));}
+       }
+    }
+    new_sec.push_back(tmp);
+  delete[] pCut;
+///////////// END Form the new partition plan with minimum penalty ///////////
+
 delete[] IcacheScore; ///////////IcacheScore delete here!
+delete[] iterationScore; 
+delete[] extrainstScore;
 delete[] size;        //////////size delete here!
-delete[] scores;      ///////////score delete here!
-//  return new_sec[i];
+delete[] Scores;      ///////////score delete here!
+
+  return new_sec;
 } 
 
 int NumHeaderInst(Loop *L)
