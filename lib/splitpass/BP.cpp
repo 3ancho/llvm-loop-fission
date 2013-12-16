@@ -143,9 +143,10 @@ void BP::dumpBP(Loop *L){
 inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
   inst_vec_vec new_sec;
   int scc_no = old_scc.size(); 
-  int all_scc_no = pow(2, scc_no);
+  int all_scc_no = pow(2, (scc_no-1));
   int *size = new (int[scc_no]);   // no_inst for sccs
   double *scores = new (double[all_scc_no]);
+  int max = 0;
   double max_score = 0;
   int best_scc;
   int i;
@@ -160,10 +161,17 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
   */
   for (int i = 0; i < scc_no; i++)
     size[i] = old_scc[i].size();
+  
+  // calculating scores
+  
+  for (int i = 0; i < scc_no; i++)
+    if (max_score < scores[i]) {
+      max = i;
+      max_score = scores[i];
+    }
+
+//  return new_sec[i];
 } 
-
-double cache_score (std::vector<int>); 
-
 
 int NumHeaderInst(Loop *L)
 {
