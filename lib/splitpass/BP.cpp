@@ -96,9 +96,11 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
     partition.push_back(dfs(curInstr, CurInstMapSet, all_insts, visited));
   } 
   
-  return partition;
   // apply heurstics
-//  return check_partition(partition);
+  if (HEURSTICS)
+    return check_partition(partition, CurL);
+  else 
+    return partition;
 }
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
@@ -140,14 +142,16 @@ void BP::dumpBP(Loop *L){
   }
 }
 
-inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
+inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   inst_vec_vec new_sec;
   int scc_no = old_scc.size(); 
   int all_scc_no = pow(2, (scc_no-1));
   int *size = new int[scc_no];   // no_inst for sccs
-  double *scores = new double[all_scc_no];
+  double *Scores = new double[all_scc_no];
 
   double *IcacheScore=new double[all_scc_no]; //IcacheScore new here!
+  double *iterationScore=new double[all_scc_no]; //IcacheScore new here!
+  double *extrainstScore=new double[all_scc_no]; //IcacheScore new here!
 
   int max = 0;
   double max_score = 0;
@@ -211,15 +215,30 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
 
   ///////////END calc Icahce score//////////// 
  
+  for (int i = 0; i < scc_no; i++){
+    iterationScore[i] = 1.0 / NUM_OF_CORES;
+  }
+
+  for (int i = 0; i < scc_no; i++){
+    extrainstScore[i] = ParPlanSizeGroup.at(i).size() * NumHeaderInst(L);
+  }
+
+  for (int i = 0; i < scc_no; i++){
+    Scores[i] = IcacheScore[i]*WEIGHT_CACHE + 
+                iterationScore[i]*WEIGHT_ITERATION + 
+                extrainstScore[i]*WEIGHT_INSTRUCTIONS; 
+  }
+
   for (int i = 0; i < scc_no; i++)
-    if (max_score < scores[i]) {
+    if (max_score < Scores[i]) {
       max = i;
-      max_score = scores[i];
+      max_score = Scores[i];
     }
 
 delete[] IcacheScore; ///////////IcacheScore delete here!
 delete[] size;        //////////size delete here!
-delete[] scores;      ///////////score delete here!
+delete[] Scores;      ///////////score delete here!
+
 //  return new_sec[i];
 } 
 

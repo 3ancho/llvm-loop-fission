@@ -44,7 +44,7 @@ typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
     inst_map_set dual_dg_map(inst_map_set dg_inst_map);
 
 // for heuristics //
-    inst_vec_vec check_partition(inst_vec_vec old_scc);
+    inst_vec_vec check_partition(inst_vec_vec old_scc, Loop* L);
     double cache_score (int * sizes);
     double parallel_score ();
     double add_inst_score (int cuts, int loop_header_cnt);
