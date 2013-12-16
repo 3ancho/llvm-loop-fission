@@ -29,16 +29,17 @@ namespace llvm {
   public:
     static char ID; 
     DG() : FunctionPass(ID) {};
+	std::map<Loop*, bool> ifLoopDist;
 	std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLoops;
+	std::map<Loop*, std::map<Instruction*, std::set<Instruction*> > > dgOfLoopsMem;
     std::map<Loop*, int> numOfNodes;
     std::map<Loop*, int> numOfDeps;
     bool runOnFunction(Function &F);
     void getAnalysisUsage(AnalysisUsage &) const;
     void printDG();
-    void buildDG(Loop *);
+    bool buildDG(Loop *);
   }; // class DG
 
 } // namespace llvm
-
 #endif
- 
+
