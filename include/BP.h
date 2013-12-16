@@ -13,6 +13,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "DG.h"
+#include "machine.h"
 #include <stdio.h>
 
 

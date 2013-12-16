@@ -163,6 +163,8 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc){
     size[i] = old_scc[i].size();
 } 
 
+double cache_score (int * sizes); 
+
 int NumHeaderInst(Loop *L)
 {
  BasicBlock *HB = L->getHeader(); //Header Block
