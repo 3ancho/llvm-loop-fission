@@ -21,10 +21,14 @@ namespace llvm{
 typedef std::pair<Instruction*, Instruction*> inst_pair;
 typedef std::vector<Instruction*> inst_vec;
 typedef std::set<Instruction*> inst_set;
+typedef std::set<inst_vec> inst_vec_set;
 typedef std::set<inst_pair> inst_pair_set;
 typedef std::map<Instruction*, bool> inst_visit;
+typedef std::map<inst_vec, bool> inst_vec_visit;
 typedef std::map<Instruction*, std::set<Instruction*> > inst_map_set;
+typedef std::map<inst_vec, std::set<inst_vec> > inst_map_vec_set;
 typedef std::vector<std::vector<Instruction*> > inst_vec_vec;
+typedef std::vector<std::vector<Instruction*> > scc;
 typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
 
   class AliasAnalysis;
@@ -41,12 +45,17 @@ typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
     DG *depmap;
   
 //////functions/////
-    inst_vec dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited);
+
+//prdg
     inst_vec_vec build_partition(Loop *CurL, inst_map_set CurInstMapSet); // build prdg (register deps)
     inst_map_set dual_dg_map(inst_map_set dg_inst_map); // helper function for build prdg
-    inst_vec_vec build_scc(Loop *CurL, inst_pair_set dg_mem_map, inst_vec_vec prdg); // build scc (mem deps) based on prdg
-    inst_pair_set find_dual(inst_map_set dg_mem_map);
-    inst_vec_vec convert(Loop *CurL); // convert Loop to inst_vec_vec sturcture
+    inst_vec dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited);
+
+//scc
+    inst_vec_vec build_scc(Loop *Curl, inst_vec_vec prdg, inst_map_vec_set mem_map);
+    inst_vec find_prdg(Instruction *inst, inst_vec_vec prdg);
+    inst_map_vec_set find_edges(inst_vec_vec prdg, inst_map_set dg_mem_map);
+    inst_vec_vec dfs_scc(inst_vec rdg, inst_vec_vec prdg, inst_map_vec_set mem_map, inst_vec_visit *visited);
 
 // for heuristics //
     inst_vec_vec check_partition(inst_vec_vec old_scc, Loop* L);
