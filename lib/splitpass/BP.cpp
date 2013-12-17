@@ -102,79 +102,79 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
   return partition; 
 }
 
-inst_pair_set BP::find_dual(inst_map_set dg_mem_map){
-  inst_pair_set duals;            //final result
-  inst_map_set::iterator it, it1;
-  inst_set::iterator idx0, idx1;
-  for(it = dg_mem_map.begin(); it != dg_mem_map.end(); it++){ //iterate every inst in mem_map
-    Instruction* first_inst = it->first;  
-    inst_set first_set = it->second;    //set for that instruction
-    for(idx0 = first_set.begin(); idx0 != first_set.end(); idx0++){
-      Instruction* second_inst = *idx0;
-      it1 = dg_mem_map.find(second_inst);  //find the instruction being checked in map
-      if (it1 == dg_mem_map.end())
-        continue;
-      else
-        inst_set second_set = it1->second;  //set of the checked instruction
-      if (second_set.find(first_inst) != second_set.end) {  //found the first inst in the set of the checked instruction: that's a dual link
-        duals.insert(std::make_pair(first_inst, second_inst));
-        continue;
-      }
+inst_vec BP::find_prdg(Instruction *inst, inst_vec_vec prdg){
+  inst_vec_vec::iterator idx;
+  for (idx = prdg.begin(); idx != prdg.end(); idx++) {
+    inst_vec rdg = *idx;
+    if ((std::find(rdg.begin(), rdg.end(), inst)) != rdg.end()){
+      return rdg;
     }
   }
-  return duals;
 }
 
-inst_vec_vec BP::build_scc(Loop *CurL, inst_pair_set dg_mem, inst_vec_vec prdg){
-  inst_vec_vec scc = prdg;  //result
-  inst_vec vec0, vec1;
-  inst_pair_set::iterator it;
-  inst_vec_vec::iterator idx0, idx1;
-  std::set<std::set<inst_vec> > sets_of_merged_vecs;
-  for(it = dg_mem.begin(); it != dg_mem.end(); it++){   //iterate pairs
-    inst_pair pair = *it;
-// find dual vertex
-    for(idx0 = prdg.begin(); idx0 != prdg.end(); idx0++){   //iterate prdg
-      inst_vec vec0 = *idx0;
-      if (vec0.find(pair->first) != vec0.end()) { 
-    //dual mem_dep in this vec(scc), find the second and record to merge
-        for(idx1 = prdg.begin(); idx1 != prdg.end(); idx1++){ //iterate prdg
-          inst_vec vec1 = *idx1;
-          if (vec1.find(pair->second) != vec1.end()) {  //in this scc
-            std::set<std::set<inst_vec> >::iterator set_iter;
-            for (set_iter = sets_of_merged_vecs.begin(); set_iter != sets_of_merged_vecs.end(); set_iter++) {
-              vec0.set = *set_iter.find(vec0); 
-              if (set_iter->find(vec0) != set_iter.end()){  //if vec0 already has a dual link to others
-                vec0.set->insert(vec1);
-                continue;
-              }
-              vec1.set = *set_iter.find(vec1); 
-              if (set_iter->find(vec1) != set_iter.end()){  //if vec1 already has a dual link to others
-                vec0.set->insert(vec0);
-                continue;
-              }
-              std::set<inst_vec> merged_vecs;               // it's a new set 
-              merged_vecs.insert(vec0);
-              merged_vecs.insert(vec1);
-              sets_of_merged_vecs.insert(merged_vecs);
-          }
-        }
-      break;
-      }
+// find the edges between partitions (prdg)
+inst_map_vec_set BP::find_edges(inst_vec_vec prdg, inst_map_set dg_mem_map){
+  inst_map_set::iterator it;
+  inst_vec::iterator idx;
+  inst_map_vec_set edges;
+  for(it = dg_mem.begin(); it != dg_mem.end(); it++){   //iterate mem_map
+    Instruction* first_inst = it->first;
+    inst_vec first_rdg = find_prdg(first_inst, prdg);
+    inst_vec first_set = it->second;
+// find rdg of first_ins    
+    for(idx = first_set.begin(); idx != first_set.end(); idx0++){
+      Instruction* second_inst = *idx;
+      inst_vec second_rdg = find_prdg(second_inst, prdg);
+      edges[first_rdg].insert[second_rdg];
     }
   }
+  return edges;
+}
 
-  //merge
-  std::set<std::set<inst_vec> >::iterator set_iter;
-  for (set_iter = sets_of_merged_vecs.begin(); set_iter != sets_of_merged_vecs.end(); set_iter++) {
-    std::set<inst_vec> merged_vecs = *set_iter; 
-    std::set<std::set<inst_vec> >::iterator idx;
-    inst_vec new_vec;
-    for (idx = merged_vecs.begin(); idx != merged_vecs.end(); idx++) {
-      new_vec.insert(*idx);     //merge the vccs
-      prdg.remove(new_vec);     //remove the original separated vccs
-    }
-    prdg.insert(new_vec);       //add the merged vcc
+inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_map){
+  inst_vec_vec scc; //result
+  inst_vec_visit visited;
+  inst_vec_visit visited_tmp; //used for dfs: visited cannot be changed in dfs
+  inst_vec_vec::iterator prdg_iter;
+  std::map<inst_vec, bool> valid;
+
+  //init
+  for (prdg_iter = prdg.begin(); prdg_iter != prdg.end(); prdg_iter++){
+    inst_vec rdg0 = *prdg_iter; //rdg0: main rdg
+    visited[rdg0] = false;
+  }
+  visited_tmp = visited;
+
+  for (prdg_iter = prdg.begin(); prdg_iter != prdg.end(); prdg_iter++){
+    inst_vec rdg0 = *prdg_iter; //rdg0: main rdg
+    if (visited[rdg0]){ // not visited
+      inst_vec_vec prdg_vec0 = dfs_scc(rdg0, prdg, mem_map, &visited_tmp); // find all reachable rdgs
+      visited_tmp = visited; //reset
+      inst_vec_vec::iterator prdg_vec_iter0;     // do dfs for all reachable rdgs to find out any un-reachable rdg
+      for (prdg_vec_iter0 = prdg_vec0.begin(); prdg_vec_iter0 = prdg_vec0.end(); prdg_vec_iter0++){
+        inst_vec rdg1 = *prdg_vec_iter0; // rdg1: checked rdg in prdg_vec0 (main vec)
+        valid[rdg1] = true; //at first assume it is part of SCC
+        if (rdg1 == rdg0) continue;
+        inst_vec_vec pdrg_vec1 = dfs_scc(rdg1, prdg, mem_map, &visited_tmp); // dfs rdg1
+        visited_tmp = visited; //reset
+        for (prdg_vec_iter1 = prdg_vec0.begin(); prdg_vec_iter1 = prdg_vec0.end(); prdg_vec_iter1++){ // checking all rdgs in prdg_vec0
+          inst_vec rdg2 = *prdg_vec_iter1; // rdg2: rdg being checked in prdg_vec_iter0
+          if (std::find(prdg_vec1.begin(), prdg_vec1.end(); rdg2) == prdg_vec1.end()) { // cannot find this rdg in prdg_vec1
+             valid[rdg1] = false; // rdg1 is not a part of SCC because it cannot reach part of the prdg_vec0
+            break;
+          } //end if
+        } //end prdg_vec_iter1
+      } //end prdg_vec_iter0
+      inst_vec merged;
+      for (prdg_vec_iter0 = prdg_vec0.begin(); prdg_vec_iter0 = prdg_vec0.end(); prdg_vec_iter0++){  //erasing, merging, and mark visited
+        inst_vec rdg1 = *prdg_vec_iter0;
+        if (valid[rdg1]){
+          visited[rdg1] = true;
+          merged.insert(merged.end(), rdg1.begin(), rdg1.end());
+        }
+      }
+    } //end if visited
+    scc.push_back(merged);
   }
 
   // apply heurstics
@@ -182,6 +182,32 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_pair_set dg_mem, inst_vec_vec prdg){
     return check_partition(scc, CurL);
   else 
     return scc;
+}
+
+inst_vec_vec BP::dfs_scc(inst_vec rdg0, inst_vec_vec prdg, inst_map_vec_set mem_map, inst_vec_visit *visited){
+  inst_vec_vec group;
+  inst_vec_set dep_insts = mem_map[rdg0];  //all insts that start_inst related to
+  inst_vec_set::iterator it;
+  group.push_back(rdg0);
+  visited[rdg0] = true;
+  for (it = dep_insts.begin(); it != dep_insts.end(); it++){
+    inst_vec inst = *it;
+    if (!(*visited)[inst]) { // not visited
+      (*visited)[inst] = true;
+      inst_vec_vec new_insts = dfs(inst, prdg, mem_map, visited);
+      //remove duplicates
+      for (inst_vec::iterator iter0 = new_insts.begin(); iter0 != new_insts.end(); iter0++){
+        for (inst_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
+          if (*iter0 == *iter1){
+            new_insts.erase(iter0);
+            break;
+          }
+        }
+      }
+      group.insert(group.end(), new_insts.begin(), new_insts.end());
+    }
+  }
+  return group;
 }
 
 inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_insts, inst_visit *visited){
