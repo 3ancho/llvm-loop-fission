@@ -207,8 +207,8 @@ bool SplitPass2::runOnFunction(Function &F) {
         std::vector<Loop*> loops; 
         std::vector<std::map<Instruction*, Instruction*> > loops_map;
 
-        unsigned sccs_size = sccs.size()-2; 
-        if (sccs_size == 1) continue;
+        int sccs_size = sccs.size()-2; 
+        if (sccs_size <= 1) continue;
 
         DEBUG(dbgs() << " SSC count: " << sccs_size <<" \n" );
 
@@ -217,7 +217,7 @@ bool SplitPass2::runOnFunction(Function &F) {
         loops.push_back(L);
         std::map<Instruction*, Instruction*> temp_map;
         // copy sccs_size - 1 times, we will use original loop 
-        for (unsigned i=0; i<sccs_size-1; ++i) {
+        for (int i=0; i<sccs_size-1; ++i) {
             temp_map.clear();
             Loop* lp = CreateOneLoop(L, temp_map);
             if (lp) {
