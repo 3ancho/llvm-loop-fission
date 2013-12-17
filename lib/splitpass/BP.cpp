@@ -29,7 +29,7 @@ void BP::OutputBP(Loop *L) {
             inst_vec_vec prdg = build_partition(L, inst_map);
             errs() << "PRDG: \n";
             dumpBP(prdg);
-            Partitions[L] = build_scc(L, find_dual(dg_mem_map), prdg); 
+            Partitions[L] = build_scc(L, prdg, find_edges(prdg, dg_mem_map)); 
 //          }
 //          else
 //            Partitions[L] = convert(L); // keep all info, just convert data structure to loop_sccs and get rid of the last two instructions (%inc and br)
@@ -118,17 +118,17 @@ inst_vec BP::find_prdg(Instruction *inst, inst_vec_vec prdg){
 // find the edges between partitions (prdg)
 inst_map_vec_set BP::find_edges(inst_vec_vec prdg, inst_map_set dg_mem_map){
   inst_map_set::iterator it;
-  inst_vec::iterator idx;
+  inst_set::iterator idx;
   inst_map_vec_set edges;
-  for(it = dg_mem.begin(); it != dg_mem.end(); it++){   //iterate mem_map
+  for(it = dg_mem_map.begin(); it != dg_mem_map.end(); it++){   //iterate mem_map
     Instruction* first_inst = it->first;
     inst_vec first_rdg = find_prdg(first_inst, prdg);
-    inst_vec first_set = it->second;
+    inst_set first_set = it->second;
 // find rdg of first_ins    
-    for(idx = first_set.begin(); idx != first_set.end(); idx0++){
+    for(idx = first_set.begin(); idx != first_set.end(); idx++){
       Instruction* second_inst = *idx;
       inst_vec second_rdg = find_prdg(second_inst, prdg);
-      edges[first_rdg].insert[second_rdg];
+      edges[first_rdg].insert(second_rdg);
     }
   }
   return edges;
@@ -151,33 +151,34 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
   for (prdg_iter = prdg.begin(); prdg_iter != prdg.end(); prdg_iter++){
     inst_vec rdg0 = *prdg_iter; //rdg0: main rdg
     if (visited[rdg0]){ // not visited
+      inst_vec merged;
       inst_vec_vec prdg_vec0 = dfs_scc(rdg0, prdg, mem_map, &visited_tmp); // find all reachable rdgs
       visited_tmp = visited; //reset
       inst_vec_vec::iterator prdg_vec_iter0;     // do dfs for all reachable rdgs to find out any un-reachable rdg
-      for (prdg_vec_iter0 = prdg_vec0.begin(); prdg_vec_iter0 = prdg_vec0.end(); prdg_vec_iter0++){
+      for (prdg_vec_iter0 = prdg_vec0.begin(); prdg_vec_iter0 != prdg_vec0.end(); prdg_vec_iter0++){
         inst_vec rdg1 = *prdg_vec_iter0; // rdg1: checked rdg in prdg_vec0 (main vec)
         valid[rdg1] = true; //at first assume it is part of SCC
         if (rdg1 == rdg0) continue;
-        inst_vec_vec pdrg_vec1 = dfs_scc(rdg1, prdg, mem_map, &visited_tmp); // dfs rdg1
+        inst_vec_vec prdg_vec1 = dfs_scc(rdg1, prdg, mem_map, &visited_tmp); // dfs rdg1
         visited_tmp = visited; //reset
-        for (prdg_vec_iter1 = prdg_vec0.begin(); prdg_vec_iter1 = prdg_vec0.end(); prdg_vec_iter1++){ // checking all rdgs in prdg_vec0
+        inst_vec_vec::iterator prdg_vec_iter1;
+        for (prdg_vec_iter1 = prdg_vec0.begin(); prdg_vec_iter1 != prdg_vec0.end(); prdg_vec_iter1++){ // checking all rdgs in prdg_vec0
           inst_vec rdg2 = *prdg_vec_iter1; // rdg2: rdg being checked in prdg_vec_iter0
-          if (std::find(prdg_vec1.begin(), prdg_vec1.end(); rdg2) == prdg_vec1.end()) { // cannot find this rdg in prdg_vec1
+          if (std::find(prdg_vec1.begin(), prdg_vec1.end(), rdg2) == prdg_vec1.end()) { // cannot find this rdg in prdg_vec1
              valid[rdg1] = false; // rdg1 is not a part of SCC because it cannot reach part of the prdg_vec0
             break;
           } //end if
         } //end prdg_vec_iter1
       } //end prdg_vec_iter0
-      inst_vec merged;
-      for (prdg_vec_iter0 = prdg_vec0.begin(); prdg_vec_iter0 = prdg_vec0.end(); prdg_vec_iter0++){  //erasing, merging, and mark visited
+      for (prdg_vec_iter0 = prdg_vec0.begin(); prdg_vec_iter0 != prdg_vec0.end(); prdg_vec_iter0++){  //erasing, merging, and mark visited
         inst_vec rdg1 = *prdg_vec_iter0;
         if (valid[rdg1]){
           visited[rdg1] = true;
           merged.insert(merged.end(), rdg1.begin(), rdg1.end());
         }
       }
+      scc.push_back(merged);
     } //end if visited
-    scc.push_back(merged);
   }
 
   // apply heurstics
@@ -192,15 +193,15 @@ inst_vec_vec BP::dfs_scc(inst_vec rdg0, inst_vec_vec prdg, inst_map_vec_set mem_
   inst_vec_set dep_insts = mem_map[rdg0];  //all insts that start_inst related to
   inst_vec_set::iterator it;
   group.push_back(rdg0);
-  visited[rdg0] = true;
+  (*visited)[rdg0] = true;
   for (it = dep_insts.begin(); it != dep_insts.end(); it++){
     inst_vec inst = *it;
     if (!(*visited)[inst]) { // not visited
       (*visited)[inst] = true;
-      inst_vec_vec new_insts = dfs(inst, prdg, mem_map, visited);
+      inst_vec_vec new_insts = dfs_scc(rdg0, prdg, mem_map, visited);
       //remove duplicates
-      for (inst_vec::iterator iter0 = new_insts.begin(); iter0 != new_insts.end(); iter0++){
-        for (inst_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
+      for (inst_vec_vec::iterator iter0 = new_insts.begin(); iter0 != new_insts.end(); iter0++){
+        for (inst_vec_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
           if (*iter0 == *iter1){
             new_insts.erase(iter0);
             break;
