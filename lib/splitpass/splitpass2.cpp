@@ -196,11 +196,12 @@ bool SplitPass2::runOnFunction(Function &F) {
     for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
         loopnum++;
     }
-    DEBUG(dbgs() << "Loop num: " << loopnum << "\n") ;
+    //DEBUG(dbgs() << "Loop num: " << loopnum << "\n") ;
 
     for( loop_sccs_map_type::iterator it = bpmap->Partitions.begin(); it != bpmap->Partitions.end(); ++it ) {
     //for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
         Loop *L = it->first;
+
         // TODO ifLoopDist[L]
          
         // scc
@@ -210,26 +211,26 @@ bool SplitPass2::runOnFunction(Function &F) {
 
         int sccs_size = sccs.size()-2; 
         if (sccs_size <= 1) { 
-            DEBUG(dbgs() << "not enough sccs " << sccs_size << "\n") ;
+            //DEBUG(dbgs() << "not enough sccs " << sccs_size << "\n") ;
             continue;
         }
 
-        DEBUG(dbgs() << " SSC count: " << sccs_size <<" \n" );
+        //DEBUG(dbgs() << " SSC count: " << sccs_size <<" \n" );
 
         // split 
-        loops.push_back(L);
         std::map<Instruction*, Instruction*> temp_map;
+
         // copy sccs_size - 1 times, we will use original loop 
         for (int i=0; i<sccs_size-1; ++i) {
             temp_map.clear();
             Loop* lp = CreateOneLoop(L, temp_map);
             if (lp) {
                 LI->addTopLevelLoop(lp); 
-
                 loops.push_back(lp);
                 loops_map.push_back(temp_map);
             }
         }
+        loops.push_back(L);
 
         std::vector< BasicBlock * > body;
         BasicBlock * Head;
@@ -237,20 +238,22 @@ bool SplitPass2::runOnFunction(Function &F) {
 
         Instruction * tempInst;
       
-        // start form index 1 because original loop(scc) is processed
-        for (unsigned i=0; i<sccs_size; ++i) {
-            DEBUG(dbgs() << " scc NO. " << i << " Started \n" );
-            body = loops[i]->getBlocks();
-            Head = loops[i]->getHeader();
-            Latch = loops[i]->getLoopLatch();
+        for (int i=0; i<sccs_size; ++i) {
+            //DEBUG(dbgs() << " scc NO. " << i << " Started \n" );
+            int loop_index = sccs_size - 1 - i;
+            body = loops[loop_index]->getBlocks();
+            Head = loops[loop_index]->getHeader();
+            Latch = loops[loop_index]->getLoopLatch();
 
             // loop throught BBs in this loop
             for(int body_i=body.size()-1; body_i>=0; --body_i) {
-                if (body[body_i] == Head) continue; // skip header and latch insts
+                if (body[body_i] == Head) continue; // skip header 
 
                 BasicBlock::iterator BBI = body[body_i]->begin(); 
                 BasicBlock::iterator BBIE = body[body_i]->end();
-                if (body_i == body.size()-1) {
+                
+                // if it is latch block skip last two insts
+                if (body_i == (int)body.size()-1) {
                     // Latch block
                     BBIE--;    
                     BBIE--;    
@@ -260,23 +263,25 @@ bool SplitPass2::runOnFunction(Function &F) {
                 for ( ; BBI != BBIE; ++BBI)  {
                     insts.push_back(BBI);
                 }
+
+                // insts in reverse order
                 for (int j=insts.size()-1; j>=0; --j) {
                     // if sccs[i] doens't have this inst, remove it from loop[i]
                     if (i>0) {
                         // if i > 0
-                        tempInst = loops_map[i-1][insts[j]];
+                        tempInst = loops_map[loop_index][insts[j]];
                     } else {
                         // if i == 0
                         tempInst = insts[j];
                     }
                     if (!scc_contains(sccs[i], tempInst)) {
-                        DEBUG(dbgs() << " scc NO. " << i << " erasing \n" );
+                        //DEBUG(dbgs() << " scc NO. " << i << " erasing \n" );
                         insts[j]->dump();
                         insts[j]->eraseFromParent();
                     }
                 }
             }
-            DEBUG(dbgs() << " scc NO. " << i << " Finished -------  \n" );
+            //DEBUG(dbgs() << " scc NO. " << i << " Finished -------  \n" );
         }
     }
 
@@ -284,7 +289,7 @@ bool SplitPass2::runOnFunction(Function &F) {
     for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
         loopnum++;
     }
-    DEBUG(dbgs() << "Loop num: " << loopnum << "\n") ;
+    //DEBUG(dbgs() << "Loop num: " << loopnum << "\n") ;
     return true; // if code is chaged, should return true
 }
 
