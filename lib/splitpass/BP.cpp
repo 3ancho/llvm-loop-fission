@@ -26,12 +26,15 @@ void BP::OutputBP(Loop *L) {
         } else {
 //          if (depmap->ifLoopDist[L]){ // split
             inst_map_set inst_map = dual_dg_map(dg_instr_map);
-            inst_vec_vec prdg = build_partition(L, inst_map); 
-            Partitions[L] = build_scc(L, dg_mem_map, prdg); 
+            inst_vec_vec prdg = build_partition(L, inst_map);
+            errs() << "PRDG: \n";
+            dumpBP(prdg);
+            Partitions[L] = build_scc(L, find_dual(dg_mem_map), prdg); 
 //          }
 //          else
 //            Partitions[L] = convert(L); // keep all info, just convert data structure to loop_sccs and get rid of the last two instructions (%inc and br)
-          dumpBP(L);
+          errs() << "\nscc: \n";
+          dumpBP(Partitions[L]);
         }
       }
     } else {
@@ -102,23 +105,39 @@ inst_vec_vec BP::build_partition(Loop *CurL, inst_map_set CurInstMapSet){
   return partition; 
 }
 
+
+
+
+
+
+
+
+
+
+
 inst_pair_set BP::find_dual(inst_map_set dg_mem_map){
   inst_pair_set duals;            //final result
   inst_map_set::iterator it, it1;
   inst_set::iterator idx0, idx1;
   for(it = dg_mem_map.begin(); it != dg_mem_map.end(); it++){ //iterate every inst in mem_map
     Instruction* first_inst = it->first;  
+    errs() << "first_inst: ";
+    errs() << *first_inst << "\n"; 
     inst_set first_set = it->second;    //set for that instruction
     for(idx0 = first_set.begin(); idx0 != first_set.end(); idx0++){
       Instruction* second_inst = *idx0;
+      errs() << "second_inst: ";
+      errs() << *second_inst << "\n"; 
       it1 = dg_mem_map.find(second_inst);  //find the instruction being checked in map
       if (it1 == dg_mem_map.end())
         continue;
-      else
+      else  {
         inst_set second_set = it1->second;  //set of the checked instruction
-      if (second_set.find(first_inst) != second_set.end) {  //found the first inst in the set of the checked instruction: that's a dual link
-        duals.insert(std::make_pair(first_inst, second_inst));
-        continue;
+        if (second_set.find(first_inst) != second_set.end()) {  //found the first inst in the set of the checked instruction: that's a dual link
+    errs() << "found pair \n";
+          duals.insert(std::make_pair(first_inst, second_inst));
+          continue;
+        }
       }
     }
   }
@@ -131,35 +150,36 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_pair_set dg_mem, inst_vec_vec prdg){
   inst_pair_set::iterator it;
   inst_vec_vec::iterator idx0, idx1;
   std::set<std::set<inst_vec> > sets_of_merged_vecs;
-  for(it = dg_mem.begin(); it != dg_mem.end(); it++){   //iterate pairs
+  for(it = dg_mem.begin(); it != dg_mem.end(); it++){       //iterate pairs
     inst_pair pair = *it;
 // find dual vertex
     for(idx0 = prdg.begin(); idx0 != prdg.end(); idx0++){   //iterate prdg
       inst_vec vec0 = *idx0;
-      if (vec0.find(pair->first) != vec0.end()) { 
+      if (std::find(vec0.begin(), vec0.end(), pair.first) != vec0.end()) {
     //dual mem_dep in this vec(scc), find the second and record to merge
         for(idx1 = prdg.begin(); idx1 != prdg.end(); idx1++){ //iterate prdg
           inst_vec vec1 = *idx1;
-          if (vec1.find(pair->second) != vec1.end()) {  //in this scc
+          if (std::find(vec1.begin(), vec1.end(), pair.second) != vec1.end()) { //in this scc
             std::set<std::set<inst_vec> >::iterator set_iter;
             for (set_iter = sets_of_merged_vecs.begin(); set_iter != sets_of_merged_vecs.end(); set_iter++) {
-              vec0.set = *set_iter.find(vec0); 
-              if (set_iter->find(vec0) != set_iter.end()){  //if vec0 already has a dual link to others
-                vec0.set->insert(vec1);
+              std::set<inst_vec> vec0_set = *set_iter; 
+              if (vec0_set.find(vec0) != vec0_set.end()){  //if vec0 already has a dual link to others
+                vec0_set.insert(vec1);   // insert vec1 to the set that contains vec0
                 continue;
               }
-              vec1.set = *set_iter.find(vec1); 
-              if (set_iter->find(vec1) != set_iter.end()){  //if vec1 already has a dual link to others
-                vec0.set->insert(vec0);
+              std::set<inst_vec> vec1_set = *set_iter; 
+              if (vec1_set.find(vec1) != vec1_set.end()){  //if vec1 already has a dual link to others
+                vec1_set.insert(vec0);
                 continue;
               }
               std::set<inst_vec> merged_vecs;               // it's a new set 
               merged_vecs.insert(vec0);
               merged_vecs.insert(vec1);
               sets_of_merged_vecs.insert(merged_vecs);
+            }
           }
+        break;
         }
-      break;
       }
     }
   }
@@ -167,14 +187,16 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_pair_set dg_mem, inst_vec_vec prdg){
   //merge
   std::set<std::set<inst_vec> >::iterator set_iter;
   for (set_iter = sets_of_merged_vecs.begin(); set_iter != sets_of_merged_vecs.end(); set_iter++) {
+ errs() << "debug\n";
     std::set<inst_vec> merged_vecs = *set_iter; 
-    std::set<std::set<inst_vec> >::iterator idx;
+    std::set<inst_vec>::iterator idx;
     inst_vec new_vec;
     for (idx = merged_vecs.begin(); idx != merged_vecs.end(); idx++) {
-      new_vec.insert(*idx);     //merge the vccs
-      prdg.remove(new_vec);     //remove the original separated vccs
+      new_vec.insert(new_vec.end(), idx->begin(), idx->end());     //merge the vccs
+      inst_vec to_delete = *idx;
+      scc.erase(std::find(scc.begin(), scc.end(), to_delete));     //remove the original separated vccs
     }
-    prdg.insert(new_vec);       //add the merged vcc
+    scc.push_back(new_vec);       //add the merged vcc
   }
 
   // apply heurstics
@@ -214,12 +236,12 @@ inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_
   return group;
 } 
 
-void BP::dumpBP(Loop *L){
-  inst_vec_vec sccs = Partitions[L];
-  for (unsigned int i = 0; i < sccs.size(); i++){
+void BP::dumpBP(inst_vec_vec scc){
+//  inst_vec_vec scc = sccs[L];
+  for (unsigned int i = 0; i < scc.size(); i++){
     errs() << "scc No. :" << i << "\n";
-    for (unsigned int j =0; j < sccs[i].size(); j++)
-      errs() << *sccs[i][j] << "\n";
+    for (unsigned int j =0; j < scc[i].size(); j++)
+      errs() << *scc[i][j] << "\n";
   }
 }
 
@@ -363,9 +385,9 @@ delete[] extrainstScore;
 delete[] size;        //////////size delete here!
 delete[] Scores;      ///////////score delete here!
 
-  errs() << "debug";
-  errs() << new_sec.size() << "\n";
-  errs() << new_sec[0].size() << "\n";
+//  errs() << "debug";
+//  errs() << new_sec.size() << "\n";
+//  errs() << new_sec[0].size() << "\n";
   return new_sec;
 } 
 
