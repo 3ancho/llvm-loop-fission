@@ -113,6 +113,8 @@ inst_vec BP::find_prdg(Instruction *inst, inst_vec_vec prdg){
       return rdg;
     }
   }
+  errs() << "instruction not found in find_prdg!!!!\n";
+//  return rdg;
 }
 
 // find the edges between partitions (prdg)
@@ -121,13 +123,20 @@ inst_map_vec_set BP::find_edges(inst_vec_vec prdg, inst_map_set dg_mem_map){
   inst_set::iterator idx;
   inst_map_vec_set edges;
   for(it = dg_mem_map.begin(); it != dg_mem_map.end(); it++){   //iterate mem_map
+    if (it->second.empty()) continue;
     Instruction* first_inst = it->first;
+//  errs() << "first inst:: " << *first_inst << "\n";
     inst_vec first_rdg = find_prdg(first_inst, prdg);
     inst_set first_set = it->second;
+//  errs() << "first inst_vec\n";
+//  dumpinst_vec(first_rdg);
 // find rdg of first_ins    
     for(idx = first_set.begin(); idx != first_set.end(); idx++){
       Instruction* second_inst = *idx;
+//  errs() << "second inst: " << *second_inst << "\n";
       inst_vec second_rdg = find_prdg(second_inst, prdg);
+//  errs() << "second inst_vec\n";
+//  dumpinst_vec(second_rdg);
       edges[first_rdg].insert(second_rdg);
     }
   }
@@ -139,8 +148,8 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
   inst_vec_visit visited;
   inst_vec_visit visited_tmp; //used for dfs: visited cannot be changed in dfs
   inst_vec_vec::iterator prdg_iter;
-  std::map<inst_vec, bool> valid;
 
+//  errs() << "build_scc\n";
   //init
   for (prdg_iter = prdg.begin(); prdg_iter != prdg.end(); prdg_iter++){
     inst_vec rdg0 = *prdg_iter; //rdg0: main rdg
@@ -150,13 +159,22 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
 
   for (prdg_iter = prdg.begin(); prdg_iter != prdg.end(); prdg_iter++){
     inst_vec rdg0 = *prdg_iter; //rdg0: main rdg
-    if (visited[rdg0]){ // not visited
+//  errs() << "first inst_vec\n";
+//  dumpinst_vec(rdg0);
+    if (!visited[rdg0]){ // not visited
+  errs() << "new rdg...\n";
+  dumpinst_vec(rdg0);
       inst_vec merged;
+      std::map<inst_vec, bool> valid;
+      valid[rdg0] = true;
       inst_vec_vec prdg_vec0 = dfs_scc(rdg0, prdg, mem_map, &visited_tmp); // find all reachable rdgs
+//  errs() << "end of dfs_scc...\n";
       visited_tmp = visited; //reset
       inst_vec_vec::iterator prdg_vec_iter0;     // do dfs for all reachable rdgs to find out any un-reachable rdg
       for (prdg_vec_iter0 = prdg_vec0.begin(); prdg_vec_iter0 != prdg_vec0.end(); prdg_vec_iter0++){
         inst_vec rdg1 = *prdg_vec_iter0; // rdg1: checked rdg in prdg_vec0 (main vec)
+//  errs() << "checked inst_vec\n";
+//  dumpinst_vec(rdg1);
         valid[rdg1] = true; //at first assume it is part of SCC
         if (rdg1 == rdg0) continue;
         inst_vec_vec prdg_vec1 = dfs_scc(rdg1, prdg, mem_map, &visited_tmp); // dfs rdg1
@@ -164,6 +182,8 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
         inst_vec_vec::iterator prdg_vec_iter1;
         for (prdg_vec_iter1 = prdg_vec0.begin(); prdg_vec_iter1 != prdg_vec0.end(); prdg_vec_iter1++){ // checking all rdgs in prdg_vec0
           inst_vec rdg2 = *prdg_vec_iter1; // rdg2: rdg being checked in prdg_vec_iter0
+//  errs() << "inst_vec being checked\n";
+//  dumpinst_vec(rdg1);
           if (std::find(prdg_vec1.begin(), prdg_vec1.end(), rdg2) == prdg_vec1.end()) { // cannot find this rdg in prdg_vec1
              valid[rdg1] = false; // rdg1 is not a part of SCC because it cannot reach part of the prdg_vec0
             break;
@@ -174,6 +194,8 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
         inst_vec rdg1 = *prdg_vec_iter0;
         if (valid[rdg1]){
           visited[rdg1] = true;
+          errs() << "inserting rdg1\n";
+          dumpinst_vec(rdg1);
           merged.insert(merged.end(), rdg1.begin(), rdg1.end());
         }
       }
@@ -194,20 +216,28 @@ inst_vec_vec BP::dfs_scc(inst_vec rdg0, inst_vec_vec prdg, inst_map_vec_set mem_
   inst_vec_set::iterator it;
   group.push_back(rdg0);
   (*visited)[rdg0] = true;
+//  errs() << "dfs_scc...\n";
+//  dumpinst_vec(rdg0);
   for (it = dep_insts.begin(); it != dep_insts.end(); it++){
     inst_vec inst = *it;
+//  errs() << "checked inst_vec\n";
+//  dumpinst_vec(inst);
     if (!(*visited)[inst]) { // not visited
       (*visited)[inst] = true;
-      inst_vec_vec new_insts = dfs_scc(rdg0, prdg, mem_map, visited);
+      inst_vec_vec new_insts = dfs_scc(inst, prdg, mem_map, visited);
       //remove duplicates
+      std::set<inst_vec_vec::iterator> to_remove;
       for (inst_vec_vec::iterator iter0 = new_insts.begin(); iter0 != new_insts.end(); iter0++){
         for (inst_vec_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
           if (*iter0 == *iter1){
-            new_insts.erase(iter0);
+            to_remove.insert(iter0);
             break;
           }
         }
       }
+      for (std::set<inst_vec_vec::iterator>::iterator iter = to_remove.begin(); iter != to_remove.end(); iter++)
+        new_insts.erase(*iter);
+
       group.insert(group.end(), new_insts.begin(), new_insts.end());
     }
   }
@@ -229,15 +259,22 @@ inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_
       (*visited)[inst] = true;
       inst_vec new_insts = dfs(inst, dg_of_loop, all_insts, visited);
       //remove duplicates
+      std::set<inst_vec::iterator> to_remove;
       for (inst_vec::iterator iter0 = new_insts.begin(); iter0 != new_insts.end(); iter0++){
         for (inst_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
           if (*iter0 == *iter1){
 //            errs() << "duplicate_inst: " << *iter0 << "\n";
-            new_insts.erase(iter0);
+            to_remove.insert(iter0);
             break;
           }
         }
       }
+
+      for (std::set<inst_vec::iterator>::iterator iter0 = to_remove.begin(); iter0 != to_remove.end(); iter0++){
+        inst_vec::iterator inst_vec_iter = *iter0;
+        new_insts.erase(inst_vec_iter);
+      }
+
       group.insert(group.end(), new_insts.begin(), new_insts.end());
     }
   }
@@ -407,4 +444,13 @@ int BP::NumHeaderInst(Loop *L)
      HeaderInstrCnt++;
  
  return HeaderInstrCnt; 
+}
+
+void BP::dumpinst_vec(inst_vec insts)
+{
+  errs() << "dump inst_vec..\n";
+  for (inst_vec::iterator inst = insts.begin(); inst != insts.end(); inst++){
+    Instruction* in = *inst;
+    errs() << *in << "\n";
+  }
 }

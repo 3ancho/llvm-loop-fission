@@ -72,7 +72,10 @@ typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs;
     bool runOnFunction(Function &F);
     void getAnalysisUsage(AnalysisUsage &) const;
     void OutputBP(Loop *L);
+
+//debug
     void dumpBP(inst_vec_vec scc);
+    void dumpinst_vec(inst_vec insts);
 
 };
 
