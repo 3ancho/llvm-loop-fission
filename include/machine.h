@@ -1,5 +1,5 @@
-#define HEURSTICS true
-//#define HEURSTICS false
+//#define HEURSTICS true
+#define HEURSTICS false
 
 #define I_CACHE_SIZE 16
 #define OVERFLOW_PENALTY 20
