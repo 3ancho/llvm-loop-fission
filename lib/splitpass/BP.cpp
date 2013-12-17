@@ -14,15 +14,15 @@ void BP::OutputBP(Loop *L) {
 	
       std::vector<Loop*> subLoops = L->getSubLoops();
 	  if (subLoops.empty()) { // analysis only applies to innermost loops, so check for that
-      errs() << "scc: printing the data from DG pass for ";
+      errs() << "BP: printing the data from DG pass for ";
       errs() <<*L << '\n';
       if (depmap->dgOfLoops.count(L) == 0) {
-        errs() << "scc: No analysis found\n";
+        errs() << "BP: No analysis found\n";
       } else {
 //        std::map<Instruction*, std::set<Instruction*> > dg_temp = depmap->dgOfLoops[L];
         inst_map_set dg_instr_map = depmap->dgOfLoops[L];
         if (dg_instr_map.empty()) {
-          errs() << "Hello: Dependence graph is empty\n";
+          errs() << "BP: Dependence graph is empty\n";
         } else {
 	////////////NOTICE//////////
           inst_map_set inst_map = dual_dg_map(dg_instr_map);
@@ -123,14 +123,13 @@ inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_
         for (inst_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
           if (*iter0 == *iter1){
 //            errs() << "duplicate_inst: " << *iter0 << "\n";
-              to_remove.insert(iter0);
-//            new_insts.erase(iter0);
+            to_remove.insert(iter0);
             break;
           }
         }
       }
 
-      for (std::set<inst_vec::iterator>::iterator iter0 = to_remove.begin(); iter0 != to_remove.end(); iter0++) {
+      for (std::set<inst_vec::iterator>::iterator iter0 = to_remove.begin(); iter0 != to_remove.end(); iter0++){
         inst_vec::iterator inst_vec_iter = *iter0;
         new_insts.erase(inst_vec_iter);
       }
