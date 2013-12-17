@@ -183,6 +183,8 @@ void SplitPass2::remapInstruction(Instruction *I,  ValueToValueMapTy &VMap) {
     }
 }
 
+typedef std::map<Loop*, std::vector<std::vector<Instruction*> > > loop_sccs_map_type;
+
 bool SplitPass2::runOnFunction(Function &F) {
     PI = &getAnalysis<ProfileInfo>();
     LI = &getAnalysis<LoopInfo>();
@@ -196,24 +198,25 @@ bool SplitPass2::runOnFunction(Function &F) {
     }
     DEBUG(dbgs() << "Loop num: " << loopnum << "\n") ;
 
-
-    for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
-        Loop *L = *i;
-        if (L->getParentLoop() != 0) continue; //skip non-toplevel loop in the iteration
-
-
+    for( loop_sccs_map_type::iterator it = bpmap->Partitions.begin(); it != bpmap->Partitions.end(); ++it ) {
+    //for (LoopInfo::iterator i = LI->begin(), e = LI->end(); i != e; ++i) {
+        Loop *L = it->first;
+        // TODO ifLoopDist[L]
+         
         // scc
         std::vector<std::vector<Instruction*> > sccs = bpmap->Partitions[L];
         std::vector<Loop*> loops; 
         std::vector<std::map<Instruction*, Instruction*> > loops_map;
 
         int sccs_size = sccs.size()-2; 
-        if (sccs_size <= 1) continue;
+        if (sccs_size <= 1) { 
+            DEBUG(dbgs() << "not enough sccs " << sccs_size << "\n") ;
+            continue;
+        }
 
         DEBUG(dbgs() << " SSC count: " << sccs_size <<" \n" );
 
         // split 
-
         loops.push_back(L);
         std::map<Instruction*, Instruction*> temp_map;
         // copy sccs_size - 1 times, we will use original loop 
@@ -228,18 +231,6 @@ bool SplitPass2::runOnFunction(Function &F) {
             }
         }
 
-
-
-        DEBUG(dbgs() << " copy done\n" );
-        DEBUG(dbgs() << " loops_Map size " << loops_map.size() << "\n" );
-        DEBUG(dbgs() << " loops_Map[1] size " << loops_map[1].size() << "\n" );
-//        for( std::map<Instruction*, Instruction*>::iterator iterator = loops_map[1].begin(); iterator != loops_map[1].end(); iterator++) {
-//            iterator->first->dump();
-//            DEBUG(dbgs() << " ----  \n" );
-//            iterator->second->dump();
-//            // Repeat if you also want to iterate through the second map.
-//        }
-        
         std::vector< BasicBlock * > body;
         BasicBlock * Head;
         BasicBlock * Latch;
@@ -256,7 +247,6 @@ bool SplitPass2::runOnFunction(Function &F) {
             // loop throught BBs in this loop
             for(int body_i=body.size()-1; body_i>=0; --body_i) {
                 if (body[body_i] == Head) continue; // skip header and latch insts
-
 
                 BasicBlock::iterator BBI = body[body_i]->begin(); 
                 BasicBlock::iterator BBIE = body[body_i]->end();
