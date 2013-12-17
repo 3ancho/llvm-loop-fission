@@ -162,8 +162,8 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
 //  errs() << "first inst_vec\n";
 //  dumpinst_vec(rdg0);
     if (!visited[rdg0]){ // not visited
-  errs() << "new rdg...\n";
-  dumpinst_vec(rdg0);
+//  errs() << "new rdg...\n";
+//  dumpinst_vec(rdg0);
       inst_vec merged;
       std::map<inst_vec, bool> valid;
       valid[rdg0] = true;
@@ -194,8 +194,8 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
         inst_vec rdg1 = *prdg_vec_iter0;
         if (valid[rdg1]){
           visited[rdg1] = true;
-          errs() << "inserting rdg1\n";
-          dumpinst_vec(rdg1);
+//          errs() << "inserting rdg1\n";
+//          dumpinst_vec(rdg1);
           merged.insert(merged.end(), rdg1.begin(), rdg1.end());
         }
       }
