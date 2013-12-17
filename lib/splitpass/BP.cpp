@@ -162,8 +162,8 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
 //  errs() << "first inst_vec\n";
 //  dumpinst_vec(rdg0);
     if (!visited[rdg0]){ // not visited
-  errs() << "new rdg...\n";
-  dumpinst_vec(rdg0);
+//  errs() << "new rdg...\n";
+//  dumpinst_vec(rdg0);
       inst_vec merged;
       std::map<inst_vec, bool> valid;
       valid[rdg0] = true;
@@ -194,8 +194,8 @@ inst_vec_vec BP::build_scc(Loop *CurL, inst_vec_vec prdg, inst_map_vec_set mem_m
         inst_vec rdg1 = *prdg_vec_iter0;
         if (valid[rdg1]){
           visited[rdg1] = true;
-          errs() << "inserting rdg1\n";
-          dumpinst_vec(rdg1);
+//          errs() << "inserting rdg1\n";
+//          dumpinst_vec(rdg1);
           merged.insert(merged.end(), rdg1.begin(), rdg1.end());
         }
       }
@@ -291,6 +291,8 @@ void BP::dumpBP(inst_vec_vec scc){
 }
 
 inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
+//  errs()<<"check partition using heuristic\n";
+  errs() << "old scc no "<<old_scc.size()<<"\n";
   inst_vec_vec new_sec;
   int scc_no = old_scc.size()-2; // subtract the last two :inc br 
   int all_scc_no = pow(2, (scc_no-1));
@@ -300,10 +302,21 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   double *IcacheScore=new double[all_scc_no]; //IcacheScore new here!
   double *iterationScore=new double[all_scc_no]; //IcacheScore new here!
   double *extrainstScore=new double[all_scc_no]; //IcacheScore new here!
+  double *multiCoreScore=new double[all_scc_no]; //IcacheScore new here!
 
   int min = 0;
   double min_score = 0;
 
+//  errs()<<"old scc built\n";
+//  for(unsigned long i=0;i<scc_no;++i)
+//  {
+//    unsigned long J=old_scc[i].size();
+//    errs()<<"scc no"<<i<<"\n";
+ //   for(unsigned long j=0;j<J;++j)
+//    {errs()<<*(old_scc[i][j])<<"\t";}
+//    errs()<<"\n";
+//  }
+//  errs()<<"end old scc built\n";
 
   /*
     sequence of iterating all possible sccs:
@@ -314,9 +327,16 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
     scc_no [11->14] = merge 0->1&1->2&2->3, 0->1&1->2&3->4, ...
     scc_no 15 = merge all
   */
-  for (int i = 0; i < scc_no; i++)
+  int total_instr_cnt=0;
+//  errs()<<"old scc size\n";
+  for (int i = 0; i < scc_no; i++){
     size[i] = old_scc[i].size();
-  
+    total_instr_cnt+=size[i];
+ //    errs()<<size[i]<<"\n";
+  }
+//  errs()<<"\n";
+//  errs()<<"header_instr_cnt="<<NumHeaderInst(L)<<"\n";
+//  errs()<<"total_instr_cnt="<<total_instr_cnt<<"\n";  
   // calculating scores
   /////////////calc Icache score//////////////
   int scc_cut_point = scc_no-1; //////////cut point = scc_no - 1
@@ -347,6 +367,12 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   }
 
   for(unsigned long i=0;i<ParPlanSizeGroup.size();i++){
+    for(unsigned long j=0;j<(ParPlanSizeGroup.at(i)).size();j++){
+      ((ParPlanSizeGroup.at(i)).at(j))+=2;
+    }
+  }
+
+  for(unsigned long i=0;i<ParPlanSizeGroup.size();i++){
      double tmpPS = 0.0;
      double maxPS = 0.0;
      double sumPS = 0.0;
@@ -361,6 +387,20 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
     *(IcacheScore+i)=(avgPS+maxPS)/2.0;
   }
 
+  //////////normalize IcacheScore////////////
+  double minIscore=*(IcacheScore+0);
+  double maxIscore=*(IcacheScore+0);
+  for(int i=0;i<all_scc_no;i++){
+     if(*(IcacheScore+i)>maxIscore){maxIscore=*(IcacheScore+i);}
+     if(*(IcacheScore+i)<minIscore){minIscore=*(IcacheScore+i);}
+  }
+  for(int i=0;i<all_scc_no;i++){
+     *(IcacheScore+i) = (*(IcacheScore+i))/maxIscore;
+  }
+//  errs()<<"maxIscore="<<maxIscore<<"\n";
+//  errs()<<"minIscore="<<minIscore<<"\n";
+//  errs()<<"max-min Iscore="<<maxIscore-minIscore<<"\n";
+//  errs()<<"normalize max-min Iscore="<<(maxIscore-minIscore)/maxIscore<<"\n";
   ///////////END calc Icahce score//////////// 
 
   /////////iteration Score//////////////// 
@@ -370,16 +410,47 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
   //////////END iteration score///////////
   //////////////extrainstrScore////////////
   for (int i = 0; i < all_scc_no; i++){
-    extrainstScore[i] = ParPlanSizeGroup.at(i).size() * NumHeaderInst(L);
+    extrainstScore[i] = ((double)(ParPlanSizeGroup.at(i).size() * NumHeaderInst(L)))/(100.0*(double)total_instr_cnt);
   }
   ///////////END extrainstrScore/////////////
+  ///////////////normalize extrainstrScore////////////////
+  double maxEIscore=*(extrainstScore+0);
+  double minEIscore=*(extrainstScore+0);
+  for (int i = 0; i < all_scc_no; i++){
+     if(*(extrainstScore+i)>maxEIscore){maxEIscore=*(extrainstScore+i);}
+     if(*(extrainstScore+i)<minEIscore){minEIscore=*(extrainstScore+i);}
+  }  
+//  for (int i = 0; i < all_scc_no; i++){
+//     *(extrainstScore+i)=*(extrainstScore+i)/maxEIscore;
+//  } 
+//  errs()<<"max extra="<< maxEIscore<<"\n";
+//  errs()<<"min extra="<< minEIscore<<"\n";
+//  errs()<<"max-min extra="<<maxEIscore-minEIscore<<"\n";
+//  errs()<<"normalize max-min extra="<<(maxEIscore-minEIscore)/maxEIscore<<"\n";
+  /////////////END normalize extrainstrScore//////////////
+
+  ///////////////multiCoreScore////////////////
+  for(int i=0;i<all_scc_no;i++){
+//     if(ParPlanSizeGroup.at(i).size()>=NUM_OF_CORES){*(multiCoreScore+i)=1.0;}
+//     else{*(multiCoreScore+i)=((double)NUM_OF_CORES)/((double)ParPlanSizeGroup.at(i).size());}
+       *(multiCoreScore+i)=((double)NUM_OF_CORES)/((double)ParPlanSizeGroup.at(i).size());
+  }
+  double maxMCscore=*(multiCoreScore+0);
+  for(int i=0;i<all_scc_no;i++){
+    if(*(multiCoreScore+i)>maxMCscore) {maxMCscore=*(multiCoreScore+i);}
+  } 
+  for(int i=0;i<all_scc_no;i++){
+     *(multiCoreScore+i)=*(multiCoreScore+i)/maxMCscore;
+  } 
+  ////////////END multiCoreScore///////////////
 
 ///////////////// find the min penalty partition plan //////////////
 
   for (int i = 0; i < all_scc_no; i++){
     Scores[i] = IcacheScore[i]*WEIGHT_CACHE + 
-                iterationScore[i]*WEIGHT_ITERATION + 
-                extrainstScore[i]*WEIGHT_INSTRUCTIONS; 
+//                iterationScore[i]*WEIGHT_ITERATION + 
+                extrainstScore[i]*WEIGHT_INSTRUCTIONS; //+
+//                multiCoreScore[i]*WEIGHT_MULTICORES; 
   }
 
   min_score=Scores[0];
@@ -412,7 +483,16 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
     new_sec.push_back(tmp);
   delete[] pCut;
 ///////////// END Form the new partition plan with minimum penalty ///////////
-
+//  errs()<<"new scc built\n";
+//  for(unsigned long i=0;i<new_sec.size();++i)
+//  {
+ //   unsigned long J=new_sec[i].size();
+//    errs()<<"scc no"<<i<<"\n";
+//    for(unsigned long j=0;j<J;++j)
+ //   {errs()<<*(new_sec[i][j])<<"\t";}
+ //   errs()<<"\n";
+//  }
+//  errs()<<"end new scc built\n";
 ///////////// Add back the last two instrs//////////
   int last=old_scc.size()-2;
   tmp.clear();
@@ -427,13 +507,15 @@ inst_vec_vec BP::check_partition(inst_vec_vec old_scc, Loop* L){
 delete[] IcacheScore; ///////////IcacheScore delete here!
 delete[] iterationScore; 
 delete[] extrainstScore;
+delete[] multiCoreScore;
 delete[] size;        //////////size delete here!
 delete[] Scores;      ///////////score delete here!
 
-//  errs() << "debug";
-//  errs() << new_sec.size() << "\n";
+  errs() << "new_sec scc no ";
+  errs() << new_sec.size()<< "\n";
 //  errs() << new_sec[0].size() << "\n";
   return new_sec;
+
 } 
 
 int BP::NumHeaderInst(Loop *L)
