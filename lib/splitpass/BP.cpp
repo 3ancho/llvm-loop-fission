@@ -118,15 +118,23 @@ inst_vec BP::dfs(Instruction *start_inst, inst_map_set dg_of_loop, inst_set all_
       (*visited)[inst] = true;
       inst_vec new_insts = dfs(inst, dg_of_loop, all_insts, visited);
       //remove duplicates
+      std::set<inst_vec::iterator> to_remove;
       for (inst_vec::iterator iter0 = new_insts.begin(); iter0 != new_insts.end(); iter0++){
         for (inst_vec::iterator iter1 = group.begin(); iter1 != group.end(); iter1++){
           if (*iter0 == *iter1){
 //            errs() << "duplicate_inst: " << *iter0 << "\n";
-            new_insts.erase(iter0);
+              to_remove.insert(iter0);
+//            new_insts.erase(iter0);
             break;
           }
         }
       }
+
+      for (std::set<inst_vec::iterator>::iterator iter0 = to_remove.begin(); iter0 != to_remove.end(); iter0++) {
+        inst_vec::iterator inst_vec_iter = *iter0;
+        new_insts.erase(inst_vec_iter);
+      }
+
       group.insert(group.end(), new_insts.begin(), new_insts.end());
     }
   }
